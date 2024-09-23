@@ -1,0 +1,27 @@
+{
+  "name": "@sapphire-table/sapphire-react",
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "hewancheng <1668961992@qq.com>",
+  "homepage": "",
+  "license": "ISC",
+  "main": "lib/sapphire-react.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmmirror.com/"
+  },
+  "scripts": {
+    "test": "node ./__tests__/sapphire-react.test.js"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "@sapphire-table/core": "./packages/core"
+  }
+}
