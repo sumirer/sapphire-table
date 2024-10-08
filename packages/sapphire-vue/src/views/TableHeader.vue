@@ -16,6 +16,7 @@
 				:key="col.column.colKey + '_' + index"
 				:column="col"
 				@filter="handleOpenFilter"
+				@sort="handleSort"
 			>
 				<template v-for="(_, name) in slots" :key="name" v-slot:[name]="bindValue">
 					<slot :name="name" v-bind="bindValue"></slot>
@@ -36,6 +37,7 @@
 					:key="colIndex"
 					:column="table.bodyColumns.value[colIndex]"
 					@filter="handleOpenFilter"
+					@sort="handleSort"
 				>
 					<template v-for="(_, name) in slots" :key="name" v-slot:[name]="bindValue">
 						<slot :name="name" v-bind="bindValue"></slot>
@@ -53,6 +55,7 @@
 				:key="col.column.colKey + '_' + index"
 				:column="col"
 				@filter="handleOpenFilter"
+				@sort="handleSort"
 			>
 				<template v-for="(_, name) in slots" :key="name" v-slot:[name]="bindValue">
 					<slot :name="name" v-bind="bindValue"></slot>
@@ -72,6 +75,7 @@ import { computed, inject, useSlots } from 'vue';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import type { IOpenFilterParams } from '../types/types';
 import TableHeaderCell from './TableHeaderCell.vue';
+import type { ISortParams } from '@sapphire-table/core';
 
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
 
@@ -79,6 +83,7 @@ const slots = useSlots();
 
 const emit = defineEmits<{
 	(e: 'filter', params: IOpenFilterParams): void;
+	(e: 'sort', params: ISortParams): void;
 }>();
 
 const bodyColumnRenderIndex = computed(() => {
@@ -98,5 +103,9 @@ const bodyColumnRenderIndex = computed(() => {
 
 const handleOpenFilter = (params: IOpenFilterParams) => {
 	emit('filter', params);
+};
+
+const handleSort = (params: ISortParams) => {
+	emit('sort', params);
 };
 </script>

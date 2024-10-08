@@ -53,12 +53,13 @@ export interface ITableColumn {
 	/**
 	 * filter params
 	 */
-	filterParams?: any;
+	filterParams?: IFilterParams;
 
 	/**
 	 * custom render slots
+	 * [default] is cell slot, [header] is custom table header slot
 	 */
-	slots?: Record<string, string>;
+	slots?: { default?: string; header?: string };
 
 	/**
 	 * 列类型
@@ -70,7 +71,6 @@ export interface ITableColumn {
 	 */
 	formatter?: Array<string> | string;
 
-	className?: string;
 	/**
 	 * 自定义当前单元格的padding值
 	 */
@@ -98,6 +98,11 @@ export interface IColumnRenderItem {
 	 * 渲染偏移量
 	 */
 	renderOffset: number;
+
+	/**
+	 * filter params
+	 */
+	filterParams: IFilterParams;
 }
 
 export interface IRenderInfo {
@@ -172,12 +177,18 @@ export interface IFilterData {
 	fixOffset: string | number;
 	top: string;
 	field: string;
-	value: string | number | null;
+	slotName: string;
+	value: any;
 	colWidth: number;
 	bodyWidth: number;
 	column: ITableColumn;
-	type: 'fixed' | 'float';
+	type: string;
 	filterInnerParams: Record<string, any>;
+}
+
+export interface ILoadDataRequestParams {
+	sort: ISortParams;
+	filter: IFilterParams[];
 }
 
 export interface ITableConfig<
@@ -187,9 +198,8 @@ export interface ITableConfig<
 > {
 	/**
 	 * 表格加载数据
-	 * @param params
 	 */
-	dataLoadMethod: () => Promise<Source[]>;
+	dataLoadMethod: (params: ILoadDataRequestParams) => Promise<Source[]>;
 	/**
 	 * 表格展开配置
 	 */
@@ -200,6 +210,7 @@ export interface IExpandParams<Data = any> {
 	loading: boolean;
 	data: Data[];
 	columns: ITableColumn[] | ITableColumns;
+	rowIndex?: number;
 }
 
 export interface ITableExpandConfig<
@@ -214,9 +225,8 @@ export interface ITableExpandConfig<
 	dataLoadMethod: (
 		params: ExpandData & {
 			rowData: IRowRenderItem;
-			rowIndex: number;
 		},
-		rowIndex: number
+		tableParams: ILoadDataRequestParams
 	) => Promise<void> | void;
 	/**
 	 * 展开默认数据
@@ -265,6 +275,11 @@ export interface ITableInstance<Source = any> {
 	 * @param indexOrSearchCallback 行index或者数据搜索回调
 	 */
 	scrollToRow: (indexOrSearchCallback: number | ((data: Source) => boolean)) => void;
+
+	/**
+	 * 筛选控制实例
+	 */
+	filterInstance: IFilterInstance;
 }
 
 export interface IFilterInstance {
@@ -300,13 +315,23 @@ export interface IExpandInstance {
 	reloadData: () => Promise<void> | void;
 }
 
-export interface IFilterParamsData {
+export interface IFilterParams {
+	value: any;
+	/**
+	 * 筛选类型
+	 */
+	type: string;
+	/**
+	 * 自定义数据
+	 */
+	customData: any;
 	/**
 	 * 筛选字段名称
 	 */
+	property?: string;
+}
+
+export interface ISortParams {
 	property: string;
-	/**
-	 * 筛选值
-	 */
-	value: any;
+	type: string;
 }

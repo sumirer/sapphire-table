@@ -16,11 +16,7 @@
 				class="header-cell-title"
 				:style="{ width: '100%' }"
 			>
-				{{
-					slots[props.column.column.slots?.['header'] as string]?.({
-						column: props.column.column,
-					})
-				}}
+				<slot :name="props.column.column.slots?.['header']" :column="props.column.column"></slot>
 			</span>
 			<span
 				v-else
@@ -28,7 +24,18 @@
 					props.column.column.align === 'center' ? 'center' : 'left'
 				}`"
 			>
-				{{ props.column.column.title }}
+				<template v-if="props.column.column.type === 'selection'">
+					<div class="vertical-center">
+						<CheckBox
+							:checked="table.isHalf.value || table.isSelectAll.value"
+							:half="table.isHalf.value"
+							@click="table.handleSelectAllClick"
+						/>
+					</div>
+				</template>
+				<template v-else>
+					{{ props.column.column.title }}
+				</template>
 			</span>
 		</div>
 		<div
@@ -40,9 +47,8 @@
 					class="sort-up-icon"
 					:style="{
 						'--sort-default-color': `var(${
-							table.sortInfo.value.colKey === props.column.column.colKey &&
-							table.sortInfo.value.sortValue ===
-								(props.column.column.sortValue || ['asc', 'desc'])[0]
+							table.sortInfo.value.property === props.column.column.colKey &&
+							table.sortInfo.value.type === (props.column.column.sortValue || ['asc', 'desc'])[0]
 								? '--sapphire-primary-color'
 								: '--sapphire-gray-color'
 						})`,
@@ -53,9 +59,8 @@
 					class="sort-down-icon"
 					:style="{
 						'--sort-default-color': `var(${
-							table.sortInfo.value.colKey === props.column.column.colKey &&
-							table.sortInfo.value.sortValue ===
-								(props.column.column.sortValue || ['asc', 'desc'])[1]
+							table.sortInfo.value.property === props.column.column.colKey &&
+							table.sortInfo.value.type === (props.column.column.sortValue || ['asc', 'desc'])[1]
 								? '--sapphire-primary-color'
 								: '--sapphire-gray-color'
 						})`,
@@ -63,22 +68,7 @@
 					@click="(event) => handleSortChange(event, props.column.column, 'down')"
 				></div>
 			</div>
-			<div
-				v-if="props.column.column.filter"
-				class="action-filter-icon"
-				@click="
-					(event) => {
-						event.stopPropagation();
-						emit('filter', {
-							offset: props.column.renderOffset,
-							filterField: props.column.column.filter as string,
-							value: '',
-							colWidth: props.column.renderWidth,
-							column: props.column.column,
-						});
-					}
-				"
-			>
+			<div v-if="props.column.column.filter" class="action-filter-icon" @click="handleOpenFilter">
 				<slot name="sapphireTableFilterIcon" :action="false">
 					<svg
 						class="action-filter-icon"
@@ -91,7 +81,7 @@
 						<path
 							:style="{
 								fill: `var(${
-									props.column.column.filterParams
+									props.column.filterParams.value !== undefined
 										? '--sapphire-primary-color'
 										: '--sapphire-gray-color'
 								})`,
@@ -106,11 +96,12 @@
 </template>
 
 <script lang="ts" setup>
-import type { IColumnRenderItem, ITableColumn } from '@sapphire-table/core';
+import type { IColumnRenderItem, ISortParams, ITableColumn } from '@sapphire-table/core';
 import { inject } from 'vue';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { IOpenFilterParams } from '../types/types';
+import CheckBox from '../components/CheckBox.vue';
 
 const props = defineProps<{
 	column: IColumnRenderItem;
@@ -118,39 +109,51 @@ const props = defineProps<{
 
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
 
-const slots = defineSlots();
-
 const emit = defineEmits<{
 	(e: 'filter', params: IOpenFilterParams): void;
+	(e: 'sort', params: ISortParams): void;
 }>();
 
 const handleSortChange = (event: Event, column: ITableColumn, type: 'up' | 'down') => {
 	event.stopPropagation();
 	const sortValueIndex = type === 'up' ? 0 : 1;
 	const sortValue = column.sortValue || ['asc', 'desc'];
-	table.sortInfo.value.sortValue = sortValue[sortValueIndex];
-	table.sortInfo.value.colKey = column.colKey;
+	table.sortInfo.value.type = sortValue[sortValueIndex];
+	table.sortInfo.value.property = column.colKey;
 };
 
 const handleColumnClick = (event: Event, column: ITableColumn) => {
 	if (!column.sort) {
 		return;
 	}
-	const { colKey, sortValue } = table.sortInfo.value;
-	if (colKey === column.colKey) {
+	const { property, type } = table.sortInfo.value;
+	if (property === column.colKey) {
 		const [sortUp, sortDown] = column.sortValue || ['asc', 'desc'];
-		if (sortValue === sortUp) {
+		if (type === sortUp) {
 			handleSortChange(event, column, 'down');
-			return;
-		}
-		if (sortValue === sortDown) {
+		} else if (type === sortDown) {
 			table.sortInfo.value = {
-				sortValue: '',
-				colKey: '',
+				type: '',
+				property: '',
 			};
-			return;
 		}
+	} else {
+		handleSortChange(event, column, 'up');
 	}
-	handleSortChange(event, column, 'up');
+	emit('sort', {
+		...table.sortInfo.value,
+	});
+};
+
+const handleOpenFilter = (event: Event) => {
+	event.stopPropagation();
+	emit('filter', {
+		offset: props.column.renderOffset,
+		filterField: props.column.column.colKey,
+		filterParams: props.column.filterParams,
+		colWidth: props.column.renderWidth,
+		column: props.column.column,
+		slotName: props.column.column.filter as string,
+	});
 };
 </script>

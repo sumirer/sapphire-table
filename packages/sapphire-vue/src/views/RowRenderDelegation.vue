@@ -1,10 +1,10 @@
 <template>
 	<TableRow
 		v-for="renderRow in renderComputeIndex"
+		:key="table.renderUpdateKey.value + '_' + renderRow.key"
 		:columns="props.columns"
 		:row-data="renderRow.data"
 		:row-index="renderRow.key"
-		:key="renderRow.key"
 		:style="{ width: targetGrid.gridContentWidth.target.value + 'px' }"
 		:position="props.position"
 		:with-expand="props.withExpand"
@@ -48,10 +48,7 @@ const renderComputeIndex = computed(() => {
 		data: IRowRenderItem;
 	}> = [];
 	// empty
-	if (
-		table.renderInfo.renderRowStart === table.renderInfo.renderRowEnd &&
-		table.renderInfo.renderRowStart === 0
-	) {
+	if (table.tableRowData.value.length === 0) {
 		return indexList;
 	}
 	for (

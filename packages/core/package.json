@@ -18,13 +18,17 @@
     "registry": "https://registry.npmmirror.com/"
   },
   "scripts": {
-    "test": "node ./__tests__/core.test.js",
+    "test": "jest ./__tests__",
     "build": "rm -rf ./lib && tsc && node ../../scripts/styleFile.js ./src/style/index.scss ./lib/style"
   },
   "dependencies": {},
   "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "@types/mocha": "^10.0.9",
     "eslint": "^8.12.0",
+    "jest": "^29.7.0",
     "sass": "^1.79.2",
+    "ts-jest": "^29.2.5",
     "typescript": "^5.6.2"
   }
 }

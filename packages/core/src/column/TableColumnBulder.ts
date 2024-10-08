@@ -1,4 +1,4 @@
-import type { ITableColumn } from '../types/types';
+import type { IFilterParams, ITableColumn } from '../types/types';
 
 /**
  * 表格列头构造器
@@ -13,9 +13,12 @@ export class TableColumnFactory {
 	private columns: ColumnBuilder[] = [];
 
 	/**
-	 * 添加新的列
-	 * @param name
-	 * @param colKey
+	 * Adds a new column to the table column factory.
+	 *
+	 * @param name - The display name of the column.
+	 * @param colKey - The unique key for the column. If not provided, a default key will be used.
+	 *
+	 * @returns A new instance of `ColumnBuilder` for further customization of the column.
 	 */
 	public addColumn(name: string, colKey = ''): ColumnBuilder {
 		const factory = new ColumnBuilder(name, colKey, this.defaultFilterSlotName);
@@ -66,10 +69,17 @@ export class TableColumnFactory {
 		return factory;
 	}
 
+	/**
+	 * Adds a new selection column to the table column factory.
+	 * This column is typically used for row selection in a table.
+	 *
+	 * @returns A new instance of `ColumnBuilder` for further customization of the selection column.
+	 */
 	public addSelection() {
-		const factory = new ColumnBuilder('全选', '', this.defaultFilterSlotName);
-		factory.setWith(80).setType('selection').setFixed('left').setWith(28);
+		const factory = new ColumnBuilder('', '', this.defaultFilterSlotName);
+		factory.setType('selection').setFixed('left').setWith(30);
 		this.columns.push(factory);
+		return factory;
 	}
 
 	/**
@@ -88,7 +98,7 @@ export class TableColumnFactory {
 			.setSlots('statusDefault')
 			.setWith(120)
 			.setRenderParams({ options })
-			.setFilter('radio', { options });
+			.setFilter('radio', undefined, options);
 		return factory;
 	}
 
@@ -131,6 +141,13 @@ export class TableColumnFactory {
 }
 
 export class ColumnBuilder {
+	/**
+	 * Represents a column builder for constructing table columns.
+	 *
+	 * @param name - The display name of the column.
+	 * @param colKey - The unique key for the column. If not provided, a default key will be used.
+	 * @param filterSlotName - The default filter slot name. Defaults to 'sapphireFilter'.
+	 */
 	public constructor(
 		public name: string,
 		public colKey: string,
@@ -207,7 +224,7 @@ export class ColumnBuilder {
 	 */
 	public setSlots(slotName: string, type: 'default' | 'header' = 'default') {
 		if (!this.slots) {
-			this.slots = { [type]: slotName };
+			this.slots = { [type]: slotName } as any;
 		} else {
 			this.slots[type] = slotName;
 		}
@@ -222,11 +239,16 @@ export class ColumnBuilder {
 	/**
 	 * 设置筛选参数
 	 * @param type
-	 * @param params
+	 * @param customData 附加参数
+	 * @param defaultValue 默认值
 	 */
-	public setFilter(type: string, params?: Record<string, any>): ColumnBuilder {
+	public setFilter(
+		type: string,
+		defaultValue?: any,
+		customData?: IFilterParams['customData']
+	): ColumnBuilder {
 		this.filterName = this.filterSlotName;
-		this.filterParams = { type, params: { ...params } };
+		this.filterParams = { customData, value: defaultValue, type };
 		return this;
 	}
 

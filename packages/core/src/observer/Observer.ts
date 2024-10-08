@@ -8,8 +8,12 @@ export interface IObserver<T> {
 }
 
 /**
- * make value observer
- * @param target
+ * Creates an observer for a given target value.
+ * The observer provides methods to add and remove listeners, as well as to update the observed value.
+ *
+ * @template T - The type of the observed value.
+ * @param target - The initial value to be observed.
+ * @returns An object implementing the IObserver interface.
  */
 export function observer<T>(target: T): IObserver<T> {
 	const listener: Array<IListener<T>> = [];
@@ -17,21 +21,29 @@ export function observer<T>(target: T): IObserver<T> {
 	const observerTarget = { value: target };
 
 	/**
-	 * register update listener, if value change, trigger update callback
-	 * @param callback
+	 * Registers an update listener. When the observed value changes, the listener will be triggered.
+	 *
+	 * @param callback - The function to be called when the observed value changes.
+	 * @returns A function that can be called to remove the listener.
 	 */
 	const addListener = (callback: IListener<T>) => {
 		listener.push(callback);
 		return () => removeListener(callback);
 	};
 
+	/**
+	 * Removes a previously registered listener.
+	 *
+	 * @param callback - The function to be removed from the list of listeners.
+	 */
 	const removeListener = (callback: IListener<T>) => {
 		listener.splice(listener.indexOf(callback), 1);
 	};
 
 	/**
-	 * notify all observer listener value update
-	 * @param newVal
+	 * Notifies all registered listeners about a value update.
+	 *
+	 * @param newVal - The new value of the observed target.
 	 */
 	const notifyListener = (newVal: T) => {
 		listener.forEach((callback) => {
@@ -40,8 +52,9 @@ export function observer<T>(target: T): IObserver<T> {
 	};
 
 	/**
-	 * update observer target value
-	 * @param newVal
+	 * Updates the observed value and notifies all registered listeners.
+	 *
+	 * @param newVal - The new value of the observed target.
 	 */
 	const replace = (newVal: T) => {
 		observerTarget.value = newVal;

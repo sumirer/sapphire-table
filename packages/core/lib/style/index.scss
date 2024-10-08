@@ -421,6 +421,14 @@
 			white-space: nowrap;
 		}
 
+		.vertical-center {
+			display: flex;
+			height: 100%;
+			align-items: center;
+			flex-direction: row;
+			justify-content: center;
+		}
+
 		.align-left {
 			text-align: left;
 		}

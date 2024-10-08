@@ -22,8 +22,9 @@
 		>
 			<slot
 				v-if="filterWidgetData.field"
-				:name="filterWidgetData.field"
+				:name="filterWidgetData.slotName"
 				v-bind="filterWidgetData"
+				:instance="table.filterInstance"
 			></slot>
 		</div>
 	</div>
@@ -39,6 +40,8 @@ import { ClickOutside as vClickOutside } from '../directives/ClickOutside';
 
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
 
+const emits = defineEmits(['filter']);
+
 const filterBodyRef = ref<HTMLDivElement>();
 
 const filterWidgetData = reactive<IFilterData>({
@@ -53,8 +56,9 @@ const filterWidgetData = reactive<IFilterData>({
 	colWidth: 0,
 	bodyWidth: 200,
 	column: {} as ITableColumn,
-	type: 'float',
+	type: '',
 	filterInnerParams: {},
+	slotName: '',
 });
 
 const handleHiddenFilter = () => {
@@ -71,38 +75,63 @@ const handleHiddenFilter = () => {
 		filterWidgetData.animationClose = false;
 		filterWidgetData.bodyWidth = 200;
 		filterWidgetData.fixOffset = '0px';
+		filterWidgetData.filterInnerParams = {};
+		filterWidgetData.type = '';
+		filterWidgetData.slotName = '';
 	}, 190);
 };
 
+/**
+ * Function to handle the display of filter dialog for a specific column.
+ *
+ * @param {IOpenFilterParams} params - Object containing parameters for opening the filter dialog.
+ * @param {string} params.filterField - The field name of the column to apply the filter.
+ * @param {number} params.offset - The horizontal offset position of the filter dialog relative to the column.
+ * @param {IFilterParams} params.filterParams - Object containing filter parameters.
+ * @param {number} params.colWidth - The width of the column.
+ * @param {ITableColumn} params.column - The column object.
+ * @param {string} params.slotName - The name of the slot to render the filter component.
+ *
+ * @returns {Promise<void>} - A promise that resolves when the filter dialog is opened.
+ */
 const handleShowFilter = async ({
 	filterField,
 	offset,
-	value,
+	filterParams,
 	colWidth,
 	column,
+	slotName,
 }: IOpenFilterParams) => {
+	// Check if filter dialog is already visible
 	if (filterWidgetData.visible) {
+		// Check if the target filter is already open
 		let isOpenTarget = filterField === filterWidgetData.field && offset === filterWidgetData.offset;
+		// Close the existing filter dialog
 		handleHiddenFilter();
-		// await hidden animation
+		// Wait for the hidden animation to complete
 		await new Promise((resolve) => {
 			setTimeout(() => {
 				resolve(true);
 			}, 200);
 		});
+		// If the target filter is already open, return early
 		if (isOpenTarget) {
 			return;
 		}
 	}
+	// Update filter widget data
 	filterWidgetData.visible = true;
 	filterWidgetData.offset = offset;
 	filterWidgetData.field = filterField;
-	filterWidgetData.value = value as string;
+	filterWidgetData.value = filterParams.value as string;
 	filterWidgetData.colWidth = colWidth;
 	filterWidgetData.column = column;
-	filterWidgetData.type = column.fixed ? 'fixed' : 'float';
 	filterWidgetData.top = table.scrollTopPosition.value + 7 + 'px';
+	filterWidgetData.filterInnerParams = filterParams.customData;
+	filterWidgetData.type = filterParams.type;
+	filterWidgetData.slotName = slotName;
 
+	// Calculate the left position of the filter dialog
 	const leftDistance =
 		offset +
 		(column.fixed ? table.scrollLeftPosition.value : table.leftFixedWidth.value) +
@@ -110,19 +139,21 @@ const handleShowFilter = async ({
 
 	filterWidgetData.left = leftDistance + 'px';
 	await nextTick();
-	// got table wrapper container
+	// Get the viewport rectangle of the table wrapper container
 	const viewportRect =
 		filterBodyRef.value?.parentElement?.parentElement?.parentElement?.getClientRects()?.[0];
 	if (!viewportRect) {
 		return;
 	}
 	await nextTick();
+	// Get the rectangle of the filter dialog
 	const rects = filterBodyRef.value?.getClientRects();
 	if (rects && rects.length > 0) {
 		const filterRect = rects[0];
+		// Update the width of the filter dialog
 		filterWidgetData.bodyWidth = filterRect.width;
 		let offset = 0;
-		// 出现溢出，进行位置修复
+		// Check if the filter dialog overflows the viewport and adjust the position accordingly
 		if (viewportRect.x > filterRect.x) {
 			offset += viewportRect.x - filterRect.x + 20;
 			if (!column.fixed) {
@@ -134,8 +165,14 @@ const handleShowFilter = async ({
 				offset -= table.rightFixedWidth.value;
 			}
 		}
+		// Update the fixed offset of the filter dialog
 		filterWidgetData.fixOffset = offset + 'px';
 	}
+};
+
+table.filterInstance.closeFilterDialog = handleHiddenFilter;
+table.filterInstance.confirmFilter = () => {
+	emits('filter', table.getAllFilterParams());
 };
 
 defineExpose<ITableFilterInstance>({
