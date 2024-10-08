@@ -15,7 +15,6 @@
 					'expand-active': rowInfo.expand,
 				}"
 				viewBox="0 0 1024 1024"
-				version="1.1"
 				xmlns="http://www.w3.org/2000/svg"
 				width="200"
 				height="200"
@@ -56,7 +55,6 @@
 						property: colData.colKey,
 						params: colData.filterParams,
 					},
-					expand: false,
 					colIndex: props.rowIndex,
 					rowIndex: props.rowIndex,
 					key: colData.colKey,
@@ -78,7 +76,7 @@ import type {
 	ITableFormats,
 } from '@sapphire-table/core';
 import { inject, toRaw } from 'vue';
-import { FORMAT_DATA_KEY, TABLE_PROVIDER_KEY } from '../constant/table';
+import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import CheckBox from '../components/CheckBox.vue';
 
@@ -96,24 +94,37 @@ const props = defineProps<ITableCellProps>();
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
 
 /**
- * 单元格数据格式化
- * @param value
- * @param col
+ * Formats the cell value based on the column's formatter function.
+ * If the enableFormatCache flag is true and the value is already cached, it returns the cached value.
+ * Otherwise, it applies the formatter function to the cell value and caches the result if enabled.
+ *
+ * @param value - The row data object containing the cell value.
+ * @param col - The column object defining the cell's properties and formatting rules.
+ *
+ * @returns The formatted cell value. If the column type is defined, it returns undefined.
  */
 const getValueByFormat = (value: IRowRenderItem, col: ITableColumn) => {
+	if (col.type) {
+		return undefined;
+	}
 	let formatter = col.formatter;
 	let formatterValue = value.rowData[col.colKey];
 	const targetValue = toRaw(value);
 	const formatCache = value.formatCache;
+
+	// Check if the value is already cached and return it if enabled
 	if (props.enableFormatCache && formatCache && col.colKey in formatCache) {
 		return formatCache[col.colKey];
 	}
+
 	if (formatter) {
 		if (!Array.isArray(formatter)) {
 			formatter = [formatter];
 		}
 		const [fnName, ...params] = formatter;
 		const formatFn = props.formats[fnName];
+
+		// Apply the formatter function to the cell value
 		if (typeof formatFn === 'function') {
 			formatterValue = formatFn(
 				{
@@ -128,21 +139,17 @@ const getValueByFormat = (value: IRowRenderItem, col: ITableColumn) => {
 				...params
 			);
 		}
+
+		// Cache the formatted value if enabled
 		if (props.enableFormatCache) {
 			if (formatCache) {
 				formatCache[col.colKey] = formatterValue;
 			} else {
-				/**
-				 * 根据Column定义的格式化方法对数据进行预先格式化，因为区域内滚动会再格式化会设计大量的无用运算
-				 * 所以在渲染前定义不可枚举熟悉进行格式化数据定义
-				 */
-				Object.defineProperty(targetValue, FORMAT_DATA_KEY, {
-					value: { [col.colKey]: formatterValue },
-					enumerable: false,
-				});
+				value.formatCache = { [col.colKey]: formatterValue };
 			}
 		}
 	}
+
 	return formatterValue;
 };
 

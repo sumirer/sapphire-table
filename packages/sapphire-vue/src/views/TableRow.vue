@@ -2,7 +2,6 @@
 	<div
 		:class="rowClassNames"
 		:data-sapphireId="props.rowIndex"
-		@click="handleRowSelect"
 		:style="{
 			height: props.rowData.renderRowHeight + 'px',
 			transform: `translateY(${props.rowData.renderOffset + 'px'})`,
@@ -42,6 +41,8 @@
 				:expandData="props.rowData.expandInnerData"
 				:rowIndex="props.rowIndex"
 				:expandHeight="props.rowData.expandHeight"
+				:instance="expandInstance"
+				:config="expandConfig"
 			></slot>
 		</TableExpandWrapper>
 	</div>
@@ -49,7 +50,13 @@
 
 <script lang="ts" setup>
 import { computed, inject, ref, useSlots } from 'vue';
-import type { IColumnRenderItem, IRowRenderItem } from '@sapphire-table/core';
+import type {
+	IColumnRenderItem,
+	IExpandInstance,
+	ILoadDataRequestParams,
+	IRowRenderItem,
+	ITableConfig,
+} from '@sapphire-table/core';
 import TableCell from './TableCell.vue';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
@@ -126,7 +133,16 @@ const handleColumUnHover = () => {
 	emits('unHover', props.rowIndex);
 };
 
-const handleRowSelect = () => {
-	//
+const reloadExpandData = async (params: ILoadDataRequestParams) => {
+	await table.loadExpandData(props.rowData, params);
+	return props.rowData.expandInnerData.data;
+};
+
+const expandConfig: ITableConfig = {
+	dataLoadMethod: reloadExpandData,
+};
+
+const expandInstance: IExpandInstance = {
+	reloadData: () => table.handleReloadRowData(props.rowIndex),
 };
 </script>

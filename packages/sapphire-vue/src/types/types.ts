@@ -1,11 +1,12 @@
-import { ITableColumn } from '@sapphire-table/core';
+import type { IFilterParams, ITableColumn } from '@sapphire-table/core';
 
 export interface IOpenFilterParams {
-	value: unknown;
+	filterParams: IFilterParams;
 	filterField: string;
 	offset: number;
 	colWidth: number;
 	column: ITableColumn;
+	slotName: string;
 }
 
 export interface ITableFilterInstance {

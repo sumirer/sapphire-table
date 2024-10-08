@@ -1,9 +1,9 @@
 <template>
-	<div ref="viewportRef" class="sapphire-table">
+	<div ref="viewportRef" class="sapphire-table" :key="updateKey">
 		<slot name="sapphireLoading" :loading="tableLoading">
 			<SapphireLoading v-if="tableLoading" />
 		</slot>
-		<TableHeader @filter="handleOpenFilter">
+		<TableHeader @filter="handleOpenFilter" @sort="handleUpdateSort">
 			<template v-for="(_, name) in usageSlots" :key="name" v-slot:[name]="bindValue">
 				<slot :name="name" v-bind="bindValue"></slot>
 			</template>
@@ -26,7 +26,7 @@
 						'px',
 				}"
 			>
-				<TableFilter ref="tableFilterRef">
+				<TableFilter ref="tableFilterRef" @filter="handleConfirmFilter">
 					<template v-for="(_, name) in usageSlots" :key="name" v-slot:[name]="bindValue">
 						<slot :name="name" v-bind="bindValue"></slot>
 					</template>
@@ -100,7 +100,9 @@ import RowRenderDelegation from './RowRenderDelegation.vue';
 import { useVirtualTable } from '../hooks/useVirtualTable';
 import type {
 	IExpandParams,
+	IFilterParams,
 	IRowRenderItem,
+	ISortParams,
 	ITableColumn,
 	ITableColumns,
 	ITableConfig,
@@ -117,17 +119,65 @@ import type { IOpenFilterParams, ITableFilterInstance } from '../types/types';
 import SapphireLoading from '../components/SapphireLoading.vue';
 
 interface ITableProps<T = any> {
+	/**
+	 * 表格数据，可以使用加载方法替代该属性
+	 * @see ITableProps.config
+	 * @see ITableConfig.dataLoadMethod
+	 */
 	data?: Array<T>;
+	/**
+	 * 列表的column定义，可以使用构建工具构建
+	 *  @see import('@sapphire-table/core').TableColumnFactory
+	 */
 	columns: Array<ITableColumn> | ITableColumns;
+	/**
+	 * 格式化工具方法集合
+	 */
 	formats?: ITableFormats<T>;
+	/**
+	 * 行样式计算
+	 * @param row
+	 */
 	computedRowStyle?: (row: IRowRenderItem) => string;
+	/**
+	 * 是否启用列表的计算缓存，当列表单元格显示存在复杂计算时，或者在使用format进行格式化时
+	 * 能有效减少计算，但是会存在缓存问题
+	 */
 	enableFormatCache?: boolean;
+	/**
+	 * 表格的配置项
+	 */
 	config?: ITableConfig;
+	/**
+	 * 行预设高度，用于预估行高度，在动态高度列表中，可以减少行抖动的发生
+	 * 在使用动态高度时候，越接近真实高度效果越好
+	 */
 	presetHeight?: number;
+	/**
+	 * 表格是否处于加载状态
+	 */
 	loading?: boolean;
 }
 
-const emit = defineEmits(['filter', 'sort', 'update:loading']);
+// const emit = defineEmits(['filter', 'sort', 'update:loading'])
+
+const emit = defineEmits<{
+	/**
+	 * 过滤事件
+	 * @description 过滤事件
+	 * @param e
+	 * @param params
+	 */
+	(e: 'filter', params: Array<IFilterParams>): void;
+	/**
+	 * 排序事件
+	 * @description 排序事件
+	 * @param e
+	 * @param params
+	 */
+	(e: 'sort', params: ISortParams): void;
+	(e: 'update:loading', loading: boolean): void;
+}>();
 
 const props = defineProps<ITableProps>();
 
@@ -136,6 +186,8 @@ const viewportRef = ref<HTMLDivElement>();
 const bodyWrapperRef = ref<HTMLDivElement>();
 
 const tableFilterRef = ref<ITableFilterInstance>();
+
+const updateKey = ref(Math.random().toString());
 
 const tableLoading = computed({
 	get() {
@@ -149,6 +201,7 @@ const tableLoading = computed({
 const slots = useSlots();
 
 const usageSlots = Object.keys(slots).reduce((previousValue, currentValue) => {
+	// 展开slots不进行传递
 	if (currentValue !== 'sapphireExpandInner') {
 		previousValue[currentValue] = slots[currentValue];
 	}
@@ -196,6 +249,22 @@ const handleOpenFilter = (params: IOpenFilterParams) => {
 	tableFilterRef.value?.openFilter(params);
 };
 
+const handleConfirmFilter = (params: Array<IFilterParams>) => {
+	// 存在数据加载配置的情况下，直接获取数据，不存在的情况下交由外部处理
+	emit('filter', params);
+	handleLoadTableData();
+};
+
+const handleUpdateSort = (params: ISortParams) => {
+	emit('sort', params);
+	handleLoadTableData();
+};
+
+const resetTableAction = () => {
+	bodyWrapperRef.value?.scrollTo(0, 0);
+	table.renderUpdateKey.value = Math.random().toString();
+};
+
 onMounted(() => {
 	if (bodyWrapperRef.value && viewportRef.value) {
 		sizeObserver.observe(bodyWrapperRef.value);
@@ -216,22 +285,41 @@ watch(
 	{ immediate: true }
 );
 
+/**
+ * Updates the table data with new data.
+ *
+ * @param {typeof props.data} data - The new data to update the table with.
+ *
+ * @returns {void}
+ */
 const updateNewData = (data: typeof props.data) => {
 	table.virtualTable.updateTableData(
 		data || [],
 		(props.config?.expandConfig?.expandDefaultParams || {}) as IExpandParams,
 		props.presetHeight || 50
 	);
+	resetTableAction();
 	nextTick(() => {
 		testScrollBarVisibleChange();
 		table.updatePingAction();
 	});
 };
 
+/**
+ * Handles loading table data based on the provided configuration.
+ * If a data load method is provided in the configuration, it will be used to fetch the data.
+ * Otherwise, it will call the `updateNewData` function with an empty array.
+ *
+ * @returns {Promise<void>} - A promise that resolves when the data loading is complete.
+ */
 const handleLoadTableData = () => {
 	if (props.config) {
 		const { dataLoadMethod } = props.config;
-		return dataLoadMethod()
+		tableFilterRef.value?.hiddenFilter();
+		return dataLoadMethod({
+			filter: table.filterParamsCache.value,
+			sort: { ...table.sortInfo.value },
+		})
 			.then((getData) => {
 				updateNewData(getData);
 			})
@@ -239,8 +327,17 @@ const handleLoadTableData = () => {
 				updateNewData([]);
 			});
 	}
+	tableFilterRef.value?.hiddenFilter();
 };
 
+/**
+ * Scrolls the table to the specified row based on the provided index or search callback.
+ *
+ * @param {number | ((data: any) => boolean)} indexOrSearchCallback - The index of the row to scroll to,
+ * or a search callback that returns true for the desired row.
+ *
+ * @returns {void}
+ */
 const handleScrollToRow = (indexOrSearchCallback: number | ((data: any) => boolean)) => {
 	const { renderInfo } = table.virtualTable.getRenderRowIndexByIndexOrSearch(indexOrSearchCallback);
 	if (renderInfo) {
@@ -261,16 +358,42 @@ if (props.data) {
 	handleLoadTableData();
 }
 
-const tableInstance: ITableInstance = {
+defineExpose<ITableInstance>({
+	/**
+	 * @public
+	 */
 	setRowExpand: table.handleUpdateExpandRow,
+	/**
+	 * @public
+	 */
 	scrollToRow: handleScrollToRow,
+	/**
+	 * @public
+	 */
 	reloadRowExpand: table.handleReloadRowData,
+	/**
+	 * @public
+	 */
 	getSelectionData: table.getSelectionData,
+	/**
+	 * @public
+	 */
 	clearSelection: table.clearAllSelection,
+	/**
+	 * @public
+	 */
 	setRowSelection: table.handleRowSelect,
+	/**
+	 * @public
+	 */
 	setDefaultSelection: table.setDefaultSelection,
+	/**
+	 * @public
+	 */
 	loadData: handleLoadTableData,
-};
-
-defineExpose<ITableInstance>(tableInstance);
+	/**
+	 * @public
+	 */
+	filterInstance: table.filterInstance,
+});
 </script>
