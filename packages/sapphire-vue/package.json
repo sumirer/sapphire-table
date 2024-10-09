@@ -1,10 +1,11 @@
 {
   "name": "@sapphire-table/sapphire-vue",
-  "version": "0.0.0",
-  "description": "> TODO: description",
-  "author": "hewancheng <1668961992@qq.com>",
-  "homepage": "",
-  "license": "ISC",
+  "version": "1.0.0",
+  "private": false,
+  "description": "A user-friendly and high-performance virtual table",
+  "author": "sumirer <1668961992@qq.com>",
+  "homepage": "https://github.com/sumirer/sapphire-table",
+  "license": "MIT",
   "main": "lib/index.es.js",
   "types": "lib/index.d.ts",
   "directories": {
@@ -17,7 +18,7 @@
     "lib"
   ],
   "publishConfig": {
-    "registry": "https://registry.npmmirror.com/"
+    "registry": "https://registry.npmjs.com/"
   },
   "scripts": {
     "test": "node ./__tests__/sapphire-vue.test.js",
