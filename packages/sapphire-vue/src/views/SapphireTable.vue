@@ -218,7 +218,7 @@ const table = useVirtualTable(props.config);
 
 provide(TABLE_PROVIDER_KEY, table);
 
-Object.assign(table.globalFormatter, props.formats || {});
+Object.assign(table.globalFormatter.value, props.formats || {});
 
 const sizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
 	const [wrapperBody] = entries;
@@ -311,7 +311,7 @@ const handleLoadTableData = () => {
 		const { dataLoadMethod } = props.config;
 		tableFilterRef.value?.hiddenFilter();
 		return dataLoadMethod({
-			filter: table.filterParamsCache.value,
+			filter: { ...table.filterParamsCache.value },
 			sort: { ...table.sortInfo.value },
 		})
 			.then((getData) => {

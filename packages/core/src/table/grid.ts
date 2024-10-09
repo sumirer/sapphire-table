@@ -99,7 +99,7 @@ export function calculateVisibleCells(describe: IGridDescribe): void {
 			renderYPosition - verticalRenderFillDistance,
 			renderYPosition + gridHeight + verticalRenderFillDistance,
 		],
-		{ offset: 'renderOffset', length: 'renderRowHeight' }
+		{ offset: 'renderOffset', length: 'renderRowHeight', expand: 'expandHeight' }
 	);
 
 	const { startIndex: colStartIndex, endIndex: colEndIndex } = calculateRenderRangeIndices(
@@ -243,9 +243,9 @@ export function calculateRenderRangeIndices<T>(
 	list: Array<T>,
 	cacheStartIndex: number,
 	maxRange: [number, number],
-	options: { offset: keyof T; length: keyof T }
+	options: { offset: keyof T; length: keyof T; expand?: keyof T }
 ) {
-	const { offset, length } = options;
+	const { offset, length, expand } = options;
 	let startIndex = 0;
 	let endIndex = 0;
 	let findStart = false;
@@ -254,14 +254,19 @@ export function calculateRenderRangeIndices<T>(
 		let newStartIndex = cacheStartIndex;
 		// 上次渲染位置在当前之下，需要向上查找位置
 		const isBefore = (cacheLast[offset] as number) >= maxRange[0];
+		const getRowItemHeightByIndex = (index: number) => {
+			let expandHeight = 0;
+			if (expand) {
+				expandHeight = (list[index][expand] as number) || 0;
+			}
+			return (list[index][length] as number) + (list[index][offset] as number) + expandHeight;
+		};
 		while (
 			newStartIndex >= 0 &&
 			newStartIndex < list.length &&
 			(isBefore
-				? (list[newStartIndex][offset] as number) + (list[newStartIndex][length] as number) >=
-					maxRange[0]
-				: (list[newStartIndex][offset] as number) + (list[newStartIndex][length] as number) <=
-					maxRange[0])
+				? getRowItemHeightByIndex(newStartIndex) >= maxRange[0]
+				: getRowItemHeightByIndex(newStartIndex) <= maxRange[0])
 		) {
 			if (isBefore) {
 				newStartIndex--;

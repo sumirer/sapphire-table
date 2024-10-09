@@ -73,6 +73,9 @@ const tableConfig: ITableConfig<IExpandData> = {
     },
     dataLoadMethod(params, tableParams) {
       console.log('get expand table params', params, tableParams)
+      if (params.data.length > 0) {
+        return Promise.resolve()
+      }
       params.loading = true
       return new Promise((resolve) => {
         setTimeout(() => {
