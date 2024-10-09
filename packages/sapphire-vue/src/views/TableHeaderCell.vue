@@ -27,7 +27,7 @@
 				<template v-if="props.column.column.type === 'selection'">
 					<div class="vertical-center">
 						<CheckBox
-							:checked="table.isHalf.value || table.isSelectAll.value"
+							:checked="table.isHalf.value || table.selectAll.value"
 							:half="table.isHalf.value"
 							@click="table.handleSelectAllClick"
 						/>
@@ -73,7 +73,6 @@
 					<svg
 						class="action-filter-icon"
 						viewBox="0 -1 12 12"
-						version="1.1"
 						xmlns="http://www.w3.org/2000/svg"
 						width="200"
 						height="200"

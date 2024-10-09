@@ -91,8 +91,6 @@ const handleHiddenFilter = () => {
  * @param {number} params.colWidth - The width of the column.
  * @param {ITableColumn} params.column - The column object.
  * @param {string} params.slotName - The name of the slot to render the filter component.
- *
- * @returns {Promise<void>} - A promise that resolves when the filter dialog is opened.
  */
 const handleShowFilter = async ({
 	filterField,
@@ -102,13 +100,10 @@ const handleShowFilter = async ({
 	column,
 	slotName,
 }: IOpenFilterParams) => {
-	// Check if filter dialog is already visible
 	if (filterWidgetData.visible) {
 		// Check if the target filter is already open
 		let isOpenTarget = filterField === filterWidgetData.field && offset === filterWidgetData.offset;
-		// Close the existing filter dialog
 		handleHiddenFilter();
-		// Wait for the hidden animation to complete
 		await new Promise((resolve) => {
 			setTimeout(() => {
 				resolve(true);
@@ -119,14 +114,13 @@ const handleShowFilter = async ({
 			return;
 		}
 	}
-	// Update filter widget data
 	filterWidgetData.visible = true;
 	filterWidgetData.offset = offset;
 	filterWidgetData.field = filterField;
 	filterWidgetData.value = filterParams.value as string;
 	filterWidgetData.colWidth = colWidth;
 	filterWidgetData.column = column;
-	filterWidgetData.top = table.scrollTopPosition.value + 7 + 'px';
+	filterWidgetData.top = table.offset.value.y + 7 + 'px';
 	filterWidgetData.filterInnerParams = filterParams.customData;
 	filterWidgetData.type = filterParams.type;
 	filterWidgetData.slotName = slotName;
@@ -134,23 +128,20 @@ const handleShowFilter = async ({
 	// Calculate the left position of the filter dialog
 	const leftDistance =
 		offset +
-		(column.fixed ? table.scrollLeftPosition.value : table.leftFixedWidth.value) +
+		(column.fixed ? table.offset.value.x : table.leftFixedWidth.value) +
 		filterWidgetData.colWidth;
 
 	filterWidgetData.left = leftDistance + 'px';
 	await nextTick();
-	// Get the viewport rectangle of the table wrapper container
 	const viewportRect =
 		filterBodyRef.value?.parentElement?.parentElement?.parentElement?.getClientRects()?.[0];
 	if (!viewportRect) {
 		return;
 	}
 	await nextTick();
-	// Get the rectangle of the filter dialog
 	const rects = filterBodyRef.value?.getClientRects();
 	if (rects && rects.length > 0) {
 		const filterRect = rects[0];
-		// Update the width of the filter dialog
 		filterWidgetData.bodyWidth = filterRect.width;
 		let offset = 0;
 		// Check if the filter dialog overflows the viewport and adjust the position accordingly

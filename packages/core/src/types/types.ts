@@ -335,3 +335,248 @@ export interface ISortParams {
 	property: string;
 	type: string;
 }
+
+/**
+ * Represents the description of a grid used for rendering rows and columns.
+ *
+ * @remarks
+ * This interface is used to store and manage the necessary information for rendering a grid,
+ * such as column and row data, grid dimensions, scroll offsets, render information, and fill distances.
+ */
+export interface IGridDescribe {
+	/**
+	 * An array of column render items.
+	 */
+	gridColumns: IColumnRenderItem[];
+
+	/**
+	 * An array of row render items.
+	 */
+	gridRows: IRowRenderItem[];
+
+	/**
+	 * The width of the grid.
+	 */
+	gridWidth: number;
+
+	/**
+	 * The content width of the grid.
+	 */
+	gridContentWidth: number;
+
+	/**
+	 * The height of the grid.
+	 */
+	gridHeight: number;
+
+	/**
+	 * The content height of the grid.
+	 */
+	gridContentHeight: number;
+
+	/**
+	 * The horizontal scroll offset.
+	 */
+	offsetX: number;
+
+	/**
+	 * The vertical scroll offset.
+	 */
+	offsetY: number;
+
+	/**
+	 * The render information for the grid.
+	 */
+	renderInfo: IRenderInfo;
+
+	/**
+	 * The vertical render fill distance.
+	 */
+	verticalRenderFillDistance: number;
+
+	/**
+	 * The horizontal render fill distance.
+	 */
+	horizontalRenderFillDistance: number;
+
+	/**
+	 * The last update task, represented as a timeout ID.
+	 */
+	lastUpdateTask: ReturnType<typeof setTimeout> | undefined;
+}
+
+export interface IScrollOffset {
+	x: number;
+	y: number;
+}
+
+export interface ISize {
+	width: number;
+	height: number;
+}
+
+/**
+ * Describes the table's state and layout, including dimensions, scroll offsets, column and row data,
+ * and other relevant information.
+ *
+ * @remarks
+ * This interface is used to manage and represent the state of the table, such as its dimensions,
+ * scroll positions, column and row render items, and other necessary information for rendering and
+ * interacting with the table.
+ */
+export interface ITableDescribe {
+	/**
+	 * The total width of the table.
+	 */
+	tableWidth: number;
+
+	/**
+	 * The content width of the table.
+	 */
+	tableContentWidth: number;
+
+	/**
+	 * The total height of the table.
+	 */
+	tableHeight: number;
+
+	/**
+	 * The content height of the table.
+	 */
+	tableContentHeight: number;
+
+	/**
+	 * The height of the table header.
+	 */
+	headerHeight: number;
+
+	/**
+	 * The width of the fixed columns on the left side.
+	 */
+	leftFixedWidth: number;
+
+	/**
+	 * The width of the fixed columns on the right side.
+	 */
+	rightFixedWidth: number;
+
+	/**
+	 * The width of the body section of the table.
+	 */
+	bodyWidth: number;
+
+	/**
+	 * The height of the body section of the table.
+	 */
+	bodyHeight: number;
+
+	/**
+	 * The column render items for the left fixed columns.
+	 */
+	leftColumns: IColumnRenderItem[];
+
+	/**
+	 * The column render items for the body columns.
+	 */
+	bodyColumns: IColumnRenderItem[];
+
+	/**
+	 * The column render items for the right fixed columns.
+	 */
+	rightColumns: IColumnRenderItem[];
+
+	/**
+	 * The row render items for the table.
+	 */
+	tableRowData: IRowRenderItem[];
+
+	/**
+	 * The column render items for the tools columns.
+	 */
+	toolsColumns: IColumnRenderItem[];
+
+	/**
+	 * The width of the table toolbar.
+	 */
+	toolBarWidth: number;
+
+	/**
+	 * The width of the scroll bar.
+	 */
+	scrollBarWidth: number;
+
+	/**
+	 * Indicates whether the left side of the table is in a "ping" state.
+	 */
+	pingLeft: boolean;
+
+	/**
+	 * Indicates whether the right side of the table is in a "ping" state.
+	 */
+	pingRight: boolean;
+
+	/**
+	 * The global formatter for cell values.
+	 */
+	globalFormatter: ITableFormats;
+
+	/**
+	 * The index of the row currently being hovered over.
+	 */
+	hoverIndex: number;
+
+	/**
+	 * The key used to trigger a render update.
+	 */
+	renderUpdateKey: string;
+
+	/**
+	 * The current sorting information.
+	 */
+	sortInfo: ISortParams;
+
+	/**
+	 * The cache of filter parameters.
+	 */
+	filterParamsCache: IFilterParams[];
+
+	/**
+	 * The number of selected rows.
+	 */
+	selectCount: number;
+
+	/**
+	 * The total height of all rows in the table.
+	 */
+	rowTotalHeight: number;
+
+	/**
+	 * The grid description for the body section.
+	 */
+	bodyGrid: IGridDescribe;
+
+	/**
+	 * The grid description for the left fixed columns.
+	 */
+	leftGrid: IGridDescribe;
+
+	/**
+	 * The grid description for the right fixed columns.
+	 */
+	rightGrid: IGridDescribe;
+
+	/**
+	 * The current scroll offset.
+	 */
+	offset: IScrollOffset;
+
+	/**
+	 * Indicates whether the table is in a "half" state.
+	 */
+	isHalf: boolean;
+
+	/**
+	 * Indicates whether all rows are selected.
+	 */
+	selectAll: boolean;
+}

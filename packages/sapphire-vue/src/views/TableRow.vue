@@ -17,7 +17,7 @@
 		>
 			<template v-for="colIndex in columnRenderRange" :key="colIndex">
 				<TableCell
-					:formats="table.globalFormatter"
+					:formats="table.globalFormatter.value"
 					:row-info="props.rowData"
 					:column-info="props.columns[colIndex]"
 					:row-index="props.rowIndex"
@@ -105,8 +105,8 @@ const columnRenderRange = computed(() => {
 	const rangeIndex: Array<number> = [];
 	if (props.position === 'body') {
 		for (
-			let index = table.renderInfo.renderColumnStart;
-			index <= table.renderInfo.renderColumnEnd;
+			let index = table.bodyGrid.value.renderInfo.renderColumnStart;
+			index <= table.bodyGrid.value.renderInfo.renderColumnEnd;
 			index++
 		) {
 			rangeIndex.push(index);

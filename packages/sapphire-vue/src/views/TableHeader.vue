@@ -27,9 +27,9 @@
 			<div
 				class="sapphire-table__header-body"
 				:style="{
-					width: table.virtualTable.bodyGrid.gridContentWidth + 'px',
+					width: table.bodyGrid.value.gridContentWidth + 'px',
 					willChange: 'transform',
-					transform: `translateX(-${table.scrollLeftPosition.value}px)`,
+					transform: `translateX(-${table.offset.value.x}px)`,
 				}"
 			>
 				<TableHeaderCell
@@ -92,8 +92,8 @@ const bodyColumnRenderIndex = computed(() => {
 		return rangeIndex;
 	}
 	for (
-		let index = table.renderInfo.renderColumnStart;
-		index <= table.renderInfo.renderColumnEnd;
+		let index = table.bodyGrid.value.renderInfo.renderColumnStart;
+		index <= table.bodyGrid.value.renderInfo.renderColumnEnd;
 		index++
 	) {
 		rangeIndex.push(index);
