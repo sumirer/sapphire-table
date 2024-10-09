@@ -15,7 +15,7 @@
 								table.leftFixedWidth.value +
 								usageColumns[colIndex].renderOffset +
 								usageColumns[colIndex].renderWidth -
-								table.scrollLeftPosition.value -
+								table.offset.value.x -
 								3 +
 								(resizeControl.index === colIndex ? resizeControl.resizeOffsetChange : 0)
 							}px`
@@ -46,6 +46,7 @@ import { computed, inject, reactive } from 'vue';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { IColumnRenderItem } from '@sapphire-table/core';
+import { ensureColumnWidthsFillSpace, updateColumnRenderInfo } from '@sapphire-table/core';
 import { utils } from '@sapphire-table/core';
 
 const props = defineProps<{ position: 'body' | 'left' | 'right' }>();
@@ -67,8 +68,8 @@ const columnRenderRange = computed(() => {
 			return rangeIndex;
 		}
 		for (
-			let index = table.renderInfo.renderColumnStart;
-			index <= table.renderInfo.renderColumnEnd;
+			let index = table.bodyGrid.value.renderInfo.renderColumnStart;
+			index <= table.bodyGrid.value.renderInfo.renderColumnEnd;
 			index++
 		) {
 			rangeIndex.push(index);
@@ -127,14 +128,14 @@ const handleResizeEnd = () => {
 
 const updateTableLayout = () => {
 	if (props.position === 'body') {
-		table.virtualTable.bodyGrid.updateGridCellRenderInfo();
+		updateColumnRenderInfo(table.bodyGrid.value);
 	} else if (props.position === 'left') {
-		table.virtualTable.leftFixedGrid.updateGridCellRenderInfo();
-		table.virtualTable.leftFixedGrid.testColumnWidth();
+		updateColumnRenderInfo(table.leftGrid.value);
+		ensureColumnWidthsFillSpace(table.leftGrid.value);
 	} else {
-		table.virtualTable.rightFixedGrid.updateGridCellRenderInfo();
-		table.virtualTable.rightFixedGrid.testColumnWidth();
+		updateColumnRenderInfo(table.rightGrid.value);
+		ensureColumnWidthsFillSpace(table.rightGrid.value);
 	}
-	table.virtualTable.updateTableLayout();
+	table.updateTableLayout();
 };
 </script>

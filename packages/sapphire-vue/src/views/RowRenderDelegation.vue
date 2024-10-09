@@ -5,7 +5,7 @@
 		:columns="props.columns"
 		:row-data="renderRow.data"
 		:row-index="renderRow.key"
-		:style="{ width: targetGrid.gridContentWidth.target.value + 'px' }"
+		:style="{ width: targetGrid.gridContentWidth + 'px' }"
 		:position="props.position"
 		:with-expand="props.withExpand"
 	>
@@ -17,8 +17,9 @@
 
 <script lang="ts" setup>
 import TableRow from './TableRow.vue';
+import type { Ref } from 'vue';
 import { computed, inject, useSlots } from 'vue';
-import type { IColumnRenderItem, IRowRenderItem } from '@sapphire-table/core';
+import type { IColumnRenderItem, IGridDescribe, IRowRenderItem } from '@sapphire-table/core';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 
@@ -35,12 +36,12 @@ const slots = useSlots();
 
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
 
-const targetGrid =
+const targetGrid: Ref<IGridDescribe> =
 	props.position === 'body'
-		? table.virtualTable.bodyGrid
+		? table.bodyGrid
 		: props.position === 'left'
-			? table.virtualTable.leftFixedGrid
-			: table.virtualTable.rightFixedGrid;
+			? table.leftGrid
+			: table.rightGrid;
 
 const renderComputeIndex = computed(() => {
 	const indexList: Array<{
@@ -52,8 +53,8 @@ const renderComputeIndex = computed(() => {
 		return indexList;
 	}
 	for (
-		let index = table.renderInfo.renderRowStart;
-		index <= table.renderInfo.renderRowEnd;
+		let index = table.bodyGrid.value.renderInfo.renderRowStart;
+		index <= table.bodyGrid.value.renderInfo.renderRowEnd;
 		index++
 	) {
 		indexList.push({
