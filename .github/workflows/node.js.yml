@@ -28,4 +28,4 @@ jobs:
         cache: 'npm'
     - run: npm install yarn -g
     - run: yarn install
-    - run: yarn run test
+    - run: cd ./packages/core && yarn run test
