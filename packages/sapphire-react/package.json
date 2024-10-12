@@ -1,11 +1,12 @@
 {
   "name": "@sapphire-table/sapphire-react",
-  "version": "0.0.0",
+  "version": "1.1.0",
   "description": "> TODO: description",
   "author": "hewancheng <1668961992@qq.com>",
   "homepage": "",
   "license": "ISC",
-  "main": "lib/sapphire-react.js",
+  "main": "lib/index.es.js",
+  "types": "lib/index.d.ts",
   "directories": {
     "lib": "lib",
     "test": "__tests__"
@@ -17,11 +18,19 @@
     "registry": "https://registry.npmmirror.com/"
   },
   "scripts": {
-    "test": "node ./__tests__/sapphire-react.test.js"
+    "build": "rm -rf ./node_modules && rm -rf ./lib && yarn && vite build"
   },
   "dependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
     "@sapphire-table/core": "./packages/core"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.2",
+    "eslint": "8.12.0",
+    "prettier": "3.3.2",
+    "vite": "^5.3.1"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   }
 }

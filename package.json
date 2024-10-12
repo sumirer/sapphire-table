@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "examples",
+    "examples/vue-example",
+    "examples/react-example",
     "docs"
   ],
   "dependencies": {

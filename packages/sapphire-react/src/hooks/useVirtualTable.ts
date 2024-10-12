@@ -1,4 +1,3 @@
-import { nextTick, reactive, toRefs, watch } from 'vue';
 import type {
 	IExpandParams,
 	IFilterInstance,
@@ -33,16 +32,28 @@ import {
 	updateTableSize,
 	updateTableLayout as updateLayout,
 } from '@sapphire-table/core';
+import { useEffect, useRef } from 'react';
+import { useUpdate } from './useUpdate';
 
-/**
- * A custom hook that encapsulates the logic for managing and interacting with a virtualized table.
- * It initializes various reactive variables and provides functions for handling table operations.
- *
- * @param tableConfig - Optional configuration object for the table.
- * @returns An object containing various reactive variables and functions for managing the table.
- */
 export const useVirtualTable = (tableConfig?: ITableConfig) => {
-	const tableDescribe = reactive<ITableDescribe>(createTableDescribe());
+	const tableDescribe = useRef<ITableDescribe>(createTableDescribe());
+
+	const { update } = useUpdate();
+
+	useEffect(() => {
+		tableDescribe.current.tableContentWidth = tableDescribe.current.bodyGrid.gridContentWidth;
+		tableDescribe.current.tableContentHeight = tableDescribe.current.rowTotalHeight;
+		update();
+	}, [tableDescribe.current.bodyGrid.gridContentWidth, tableDescribe.current.rowTotalHeight]);
+
+	useEffect(() => {
+		tableDescribe.current.leftFixedWidth = tableDescribe.current.leftGrid.gridContentWidth;
+		tableDescribe.current.rightFixedWidth = tableDescribe.current.rightGrid.gridContentWidth;
+		update();
+	}, [
+		tableDescribe.current.leftGrid.gridContentWidth,
+		tableDescribe.current.rightGrid.gridContentWidth,
+	]);
 
 	/**
 	 * Updates the vertical and horizontal render fill distances for the table body grid.
@@ -51,7 +62,7 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * @param horizontal - The new horizontal render fill distance.
 	 *
 	 * @remarks
-	 * This function sets the `verticalRenderFillDistance` and `horizontalRenderFillDistance` properties of the `bodyGrid` in the `tableDescribe` object to the provided `vertical` and `horizontal` parameters, respectively.
+	 * This function sets the `verticalRenderFillDistance` and `horizontalRenderFillDistance` properties of the `bodyGrid` in the `tableDescribe.current` object to the provided `vertical` and `horizontal` parameters, respectively.
 	 * These properties determine the number of rows and columns to render beyond the visible area to improve scrolling performance.
 	 *
 	 * @example
@@ -60,8 +71,9 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * ```
 	 */
 	const updateBodyRenderFillDistance = (vertical: number, horizontal: number) => {
-		tableDescribe.bodyGrid.verticalRenderFillDistance = vertical;
-		tableDescribe.bodyGrid.horizontalRenderFillDistance = horizontal;
+		tableDescribe.current.bodyGrid.verticalRenderFillDistance = vertical;
+		tableDescribe.current.bodyGrid.horizontalRenderFillDistance = horizontal;
+		update();
 	};
 
 	/**
@@ -76,7 +88,10 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * After that, it calls the `updateTableLayout` and `testColumnWidth` methods of the `virtualTable` to reflect the changes.
 	 */
 	const updateBodySize = (width: number, height: number) => {
-		updateTableSize(tableDescribe, { width: width, height: height });
+		updateTableSize(tableDescribe.current, { width: width, height: height });
+		setTimeout(() => {
+			update();
+		});
 	};
 
 	/**
@@ -88,7 +103,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * This function updates the `hoverIndex` reactive variable with the provided `index` parameter.
 	 */
 	const updateHoverIndex = (index: number) => {
-		updateTableHoverIndex(tableDescribe, index);
+		updateTableHoverIndex(tableDescribe.current, index);
+		update();
 	};
 
 	/**
@@ -103,7 +119,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * After updating the row data, it calls the `updateRowHeight` and `updateTableLayout` methods of the `virtualTable` to reflect the changes.
 	 */
 	const handleExpandRow = (rowIndex: number) => {
-		updateTableRowExpand(tableDescribe, rowIndex);
+		updateTableRowExpand(tableDescribe.current, rowIndex);
+		update();
 	};
 
 	/**
@@ -117,7 +134,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * If `action` is `true`, it increments the `selectCount` by `1`. If `action` is `false`, it decrements the `selectCount` by `1`.
 	 */
 	const handleRowSelect = (rowIndex: number, action: boolean) => {
-		updateTableRowSelection(tableDescribe, rowIndex, action);
+		updateTableRowSelection(tableDescribe.current, rowIndex, action);
+		update();
 	};
 
 	/**
@@ -128,7 +146,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * It also resets the `selectCount` to `0`.
 	 */
 	const clearAllSelection = () => {
-		updateTableRowToUnSelection(tableDescribe);
+		updateTableRowToUnSelection(tableDescribe.current);
+		update();
 	};
 
 	/**
@@ -139,7 +158,7 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * It then maps the selected rows to their corresponding row data and returns the array.
 	 */
 	const getSelectionData = () => {
-		return getTableAllSelectionData(tableDescribe);
+		return getTableAllSelectionData(tableDescribe.current);
 	};
 
 	/**
@@ -149,7 +168,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * @param key - The key of the property to compare for selection.
 	 */
 	const setDefaultSelection = (selectData: Array<any>, key: string) => {
-		setTableSelectionFromData(tableDescribe, selectData, key);
+		setTableSelectionFromData(tableDescribe.current, selectData, key);
+		update();
 	};
 
 	/**
@@ -180,7 +200,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * If a render row information is found, it calls the `loadExpandData` function with the corresponding row data and then expands the row using the `handleExpandRow` function.
 	 */
 	const handleUpdateExpandRow = (indexOrSearchCallback: number | ((data: any) => boolean)) => {
-		updateTableExpandByDataIndex(tableDescribe, indexOrSearchCallback);
+		updateTableExpandByDataIndex(tableDescribe.current, indexOrSearchCallback);
+		update();
 	};
 
 	/**
@@ -192,7 +213,10 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * This function calls the `loadExpandData` function with the row data at the specified index and updates the row data.
 	 */
 	const handleReloadRowData = (rowIndex: number) => {
-		reloadTableExpandByDataIndex(tableDescribe, rowIndex);
+		reloadTableExpandByDataIndex(tableDescribe.current, rowIndex);
+		setTimeout(() => {
+			update();
+		});
 	};
 
 	/**
@@ -203,7 +227,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * If the table is in a fully selected state, this function clears all selections by calling the `clearAllSelection` function.
 	 */
 	const handleSelectAllClick = () => {
-		updateTableRowToAllSelection(tableDescribe);
+		updateTableRowToAllSelection(tableDescribe.current);
+		update();
 	};
 
 	/**
@@ -221,7 +246,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * ```
 	 */
 	const handleResetFilter = (colKey: string) => {
-		resetTableFilterByColumnKey(tableDescribe, colKey);
+		resetTableFilterByColumnKey(tableDescribe.current, colKey);
+		update();
 	};
 
 	/**
@@ -237,7 +263,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * ```
 	 */
 	const handleClearAllFilter = () => {
-		resetTableAllFilter(tableDescribe);
+		resetTableAllFilter(tableDescribe.current);
+		update();
 	};
 
 	/**
@@ -255,7 +282,8 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * ```
 	 */
 	const handleUpdateColumnFilter: IFilterInstance['updateFilter'] = (colKey, filterValue) => {
-		updateTableFilter(tableDescribe, colKey, filterValue);
+		updateTableFilter(tableDescribe.current, colKey, filterValue);
+		update();
 	};
 
 	/**
@@ -265,11 +293,12 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 	 * Each filter parameter object contains the property, filter type, filter value, and custom data.
 	 */
 	const getAllFilterParams = () => {
-		return getTableAllFilterParams(tableDescribe);
+		return getTableAllFilterParams(tableDescribe.current);
 	};
 
 	const updatePingAction = () => {
-		updateTableFixedColumnPing(tableDescribe);
+		updateTableFixedColumnPing(tableDescribe.current);
+		update();
 	};
 
 	const updateTableData = (
@@ -277,58 +306,50 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 		expandData: IExpandParams,
 		presetHeight: number
 	) => {
-		updateTableRowDataConfig(tableDescribe, dataList, expandData, presetHeight);
+		updateTableRowDataConfig(tableDescribe.current, dataList, expandData, presetHeight);
+		update();
 	};
-
-	watch(
-		() => [tableDescribe.bodyGrid.gridContentWidth, tableDescribe.rowTotalHeight],
-		() => {
-			tableDescribe.tableContentWidth = tableDescribe.bodyGrid.gridContentWidth;
-			tableDescribe.tableContentHeight = tableDescribe.rowTotalHeight;
-		},
-		{ immediate: true }
-	);
-
-	watch(
-		() => [tableDescribe.leftGrid.gridContentWidth, tableDescribe.rightGrid.gridContentWidth],
-		() => {
-			tableDescribe.leftFixedWidth = tableDescribe.leftGrid.gridContentWidth;
-			tableDescribe.rightFixedWidth = tableDescribe.rightGrid.gridContentWidth;
-		},
-		{ immediate: true }
-	);
 
 	const getRenderRowIndexByIndexOrSearch = (
 		indexOrSearchCallback: number | ((data: any) => boolean)
 	) => {
-		return findTableRowDataAndIndex(tableDescribe, indexOrSearchCallback);
+		return findTableRowDataAndIndex(tableDescribe.current, indexOrSearchCallback);
 	};
 
 	const updateTableColumn = (column: ITableColumns) => {
-		updateTableColumnsConfig(tableDescribe, column);
-		ensureColumnWidthsFillSpace(tableDescribe.bodyGrid);
+		updateTableColumnsConfig(tableDescribe.current, column);
+		ensureColumnWidthsFillSpace(tableDescribe.current.bodyGrid);
+		update();
 	};
 
 	const updateScrollOffset = (x: number, y: number) => {
-		updateTableScrollOffset(tableDescribe, { x, y });
+		updateTableScrollOffset(tableDescribe.current, { x, y });
 		updatePingAction();
+		update();
 	};
 
 	const updateTableLayout = () => {
-		updateLayout(tableDescribe);
+		updateLayout(tableDescribe.current);
+		setTimeout(() => {
+			update();
+		});
 	};
 
-	const filterInstance: IFilterInstance = {
+	const updateScrollBodyBarWidth = (width: number) => {
+		tableDescribe.current.scrollBarWidth = width;
+		update();
+	};
+
+	const filterInstance = useRef<IFilterInstance>({
 		resetFilter: handleResetFilter,
 		closeFilterDialog: null as any,
 		clearAllFilter: handleClearAllFilter,
 		updateFilter: handleUpdateColumnFilter,
 		confirmFilter: null as any,
-	};
+	});
 
 	return {
-		filterInstance,
-		...toRefs(tableDescribe),
+		...tableDescribe.current,
 		handleSelectAllClick,
 		updateBodySize,
 		updatePingAction,
@@ -348,6 +369,9 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 		updateScrollOffset,
 		updateTableLayout,
 		updateBodyRenderFillDistance,
+		updateScrollBodyBarWidth,
+		filterInstance: filterInstance.current,
+		updateTableView: update,
 	};
 };
 
