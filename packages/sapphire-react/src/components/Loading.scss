@@ -1,0 +1,47 @@
+.sapphire-loading {
+  width: 30px;
+  height: 30px;
+  justify-content: center;
+  display: flex;
+  animation: sapphire-loading 1s linear infinite;
+
+  >svg {
+    width: 30px;
+    height: 30px;
+    fill: var(--sapphire-primary-color, #266fe8);
+  }
+
+  &__mask {
+    width: 100%;
+    height: 100%;
+    z-index: 9;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-color: rgba(255,255,255, .5);
+    transition: background-color .2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    animation: sapphire-opacity 200ms none;
+  }
+}
+
+@keyframes sapphire-loading {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sapphire-opacity {
+  from {
+    opacity: 0;
+  }
+  to {
+   opacity: 1;
+  }
+}

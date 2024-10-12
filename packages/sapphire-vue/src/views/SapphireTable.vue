@@ -166,6 +166,9 @@ interface ITableProps<T = any> {
 	 * Whether the table is in a loading state.
 	 */
 	loading?: boolean;
+
+	verticalRenderFillDistance?: number;
+	horizontalRenderFillDistance?: number;
 }
 
 // const emit = defineEmits(['filter', 'sort', 'update:loading'])
@@ -279,6 +282,17 @@ watch(
 			testScrollBarVisibleChange();
 			table.updatePingAction();
 		});
+	},
+	{ immediate: true }
+);
+
+watch(
+	() => [props.verticalRenderFillDistance, props.horizontalRenderFillDistance],
+	() => {
+		table.updateBodyRenderFillDistance(
+			props.verticalRenderFillDistance ?? 100,
+			props.horizontalRenderFillDistance ?? 200
+		);
 	},
 	{ immediate: true }
 );
