@@ -19,7 +19,7 @@
     "registry": "https://registry.npmjs.com/"
   },
   "scripts": {
-    "test": "jest ./__tests__",
+    "test": "jest ./__tests__ -c ./jest.config.js",
     "build": "rm -rf ./lib && tsc && node ../../scripts/styleFile.js ./src/style/index.scss ./lib/style"
   },
   "dependencies": {},

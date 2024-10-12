@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
-
-import { ITableColumn, ITableColumns, ITableDescribe } from '../src/types/types';
+import type { ITableColumn, ITableColumns, ITableDescribe } from '../src/types/types';
 import { createTableDescribe, updateTableColumnsConfig } from '../src/table/table';
 
 const mockTableDescribe: ITableDescribe = {

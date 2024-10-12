@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
-
 import { TableColumnFactory, ColumnBuilder } from '../src/column/TableColumnBulder';
-import { ITableColumn } from '../src/types/types';
+import type { ITableColumn } from '../src/types/types';
 
 describe('TableColumnFactory', () => {
 	test('should support adding a selection column', () => {

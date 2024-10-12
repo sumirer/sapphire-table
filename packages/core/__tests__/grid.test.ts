@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
-
-import { IGridDescribe, ITableColumns } from '../src/types/types';
+import type { IGridDescribe, ITableColumns } from '../src/types/types';
 import {
 	calculateRenderRangeIndices,
 	createGridDescribe,
