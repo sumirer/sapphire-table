@@ -1,6 +1,6 @@
 {
   "name": "@sapphire-table/core",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "description": "A user-friendly and high-performance virtual table",
   "author": "sumirer <1668961992@qq.com>",
@@ -19,7 +19,7 @@
     "registry": "https://registry.npmjs.com/"
   },
   "scripts": {
-    "test": "jest ./__tests__",
+    "test": "jest ./__tests__ -c ./jest.config.js",
     "build": "rm -rf ./lib && tsc && node ../../scripts/styleFile.js ./src/style/index.scss ./lib/style"
   },
   "dependencies": {},

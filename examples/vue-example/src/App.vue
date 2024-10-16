@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { SapphireTable } from '@sapphire-table/sapphire-vue'
-import { type IExpandParams, type ITableConfig, TableColumnFactory } from '@sapphire-table/core'
+import SapphireTable from '@sapphire-table/sapphire-vue'
+import {
+  type ICellRenderCallback,
+  type IExpandParams,
+  type ITableConfig,
+  TableColumnFactory
+} from '@sapphire-table/core'
 import { ref } from 'vue'
 import TableFilterContent from '@/components/TableFilterContent.vue'
 
@@ -126,6 +131,16 @@ const tableConfig: ITableConfig<IExpandData> = {
     }
   }
 }
+
+const tableCellRender: ICellRenderCallback = (row, column, rowIndex, columnIndex) => {
+  if (rowIndex === 3 && columnIndex === 1) {
+    return { colSpan: 3, rowSpan: 3 }
+  }
+  return {
+    colSpan: 1,
+    rowSpan: 1
+  }
+}
 </script>
 
 <template>
@@ -135,6 +150,9 @@ const tableConfig: ITableConfig<IExpandData> = {
       :config="tableConfig"
       style="height: 600px"
       :loading="loading"
+      :cell-render="tableCellRender"
+      stripe
+      range-selection
     >
       <template #testSlots="{ formatValue }">
         {{ formatValue + '---custom' }}

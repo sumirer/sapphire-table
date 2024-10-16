@@ -1,6 +1,6 @@
 {
   "name": "@sapphire-table/sapphire-vue",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "description": "A user-friendly and high-performance virtual table",
   "author": "sumirer <1668961992@qq.com>",
@@ -21,10 +21,11 @@
     "registry": "https://registry.npmjs.com/"
   },
   "scripts": {
-    "build": "rm -rf ./node_modules && rm -rf ./lib && yarn && vite build"
+    "build": "rm -rf ./lib && vite build"
   },
   "dependencies": {
-    "@sapphire-table/core": "./packages/core"
+    "@sapphire-table/core": "workspace:*",
+    "vue": "^3.5.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.5",
@@ -36,8 +37,5 @@
     "prettier": "3.3.2",
     "vite-plugin-dts": "^4.2.1",
     "vue-eslint-parser": "9.4.3"
-  },
-  "peerDependencies": {
-    "vue": "^3.5.4"
   }
 }

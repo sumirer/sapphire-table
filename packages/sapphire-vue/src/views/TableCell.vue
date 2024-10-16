@@ -1,81 +1,77 @@
 <template>
 	<div
-		v-if="colData.type === 'expand'"
-		class="sapphire-table__table-cell tools"
-		@click="handleOpenRowExpand"
-		:style="{
-			width: props.columnInfo.renderWidth + 'px',
-			transform: `translateX(${props.columnInfo.renderOffset}px)`,
-		}"
-	>
-		<slot name="sapphireExpandIcon" :expand="rowInfo.expand">
-			<svg
-				:class="{
-					'sapphire-table__table-expand': true,
-					'expand-active': rowInfo.expand,
-				}"
-				viewBox="0 0 1024 1024"
-				xmlns="http://www.w3.org/2000/svg"
-				width="200"
-				height="200"
-			>
-				<path
-					d="M295.7 897.96c-18.8-18.8-18.8-49.1 0-67.9l318-318-318-318c-18.8-18.8-18.8-49.2 0-67.9 18.8-18.8 49.1-18.8 67.9 0l352 352c18.8 18.8 18.8 49.2 0 67.9l-352 352c-9.4 9.4-21.7 14-34 14C317.4 911.96 305.1 907.36 295.7 897.96z"
-				></path>
-			</svg>
-		</slot>
-	</div>
-	<div
-		v-else-if="colData.type === 'selection' || colData.type === 'radio'"
-		class="sapphire-table__table-cell tools"
-		:style="{
-			width: props.columnInfo.renderWidth + 'px',
-			transform: `translateX(${props.columnInfo.renderOffset}px)`,
-		}"
-	>
-		<CheckBox :checked="props.rowInfo.selection" @change="handleSelectRowStatusChange" />
-	</div>
-	<div
-		v-else
 		class="sapphire-table__table-cell"
-		:style="{
-			width: props.columnInfo.renderWidth + 'px',
-			transform: `translateX(${props.columnInfo.renderOffset}px)`,
-		}"
-		:class="{ [`align-${props.columnInfo.column.align || 'left'}`]: true }"
+		@click="colData.type === 'expand' ? handleOpenRowExpand() : undefined"
+		:style="renderCellStyle"
+		:role="colData.type ? colData.type : 'cell'"
+		:rowspan="cellSpan.rowSpan"
+		:colspan="cellSpan.colSpan"
+		:data-row="props.rowIndex"
+		:data-col="props.columnIndex"
+		:class="selectionClassNames"
+		tabindex="-1"
 	>
-		<template v-if="slotsName">
-			<slot
-				:name="slotsName"
-				v-bind="{
-					row: rowInfo.rowData,
-					column: {
-						...colData,
-						field: colData.colKey,
-						property: colData.colKey,
-						params: colData.filterParams,
-					},
-					colIndex: props.rowIndex,
-					rowIndex: props.rowIndex,
-					key: colData.colKey,
-					formatValue: cellFormatValue,
-				}"
-			></slot>
+		<template v-if="colData.type === 'expand'">
+			<slot name="sapphireExpandIcon" :expand="rowInfo.expand">
+				<svg
+					:class="{
+						'sapphire-table__table-expand': true,
+						'expand-active': rowInfo.expand,
+					}"
+					viewBox="0 0 1024 1024"
+					xmlns="http://www.w3.org/2000/svg"
+					width="200"
+					height="200"
+				>
+					<path
+						d="M295.7 897.96c-18.8-18.8-18.8-49.1 0-67.9l318-318-318-318c-18.8-18.8-18.8-49.2 0-67.9 18.8-18.8 49.1-18.8 67.9 0l352 352c18.8 18.8 18.8 49.2 0 67.9l-352 352c-9.4 9.4-21.7 14-34 14C317.4 911.96 305.1 907.36 295.7 897.96z"
+					></path>
+				</svg>
+			</slot>
+		</template>
+		<template v-else-if="colData.type === 'selection' || colData.type === 'radio'">
+			<CheckBox :checked="props.rowInfo.selection" @change="handleSelectRowStatusChange" />
 		</template>
 		<template v-else>
-			{{ cellFormatValue }}
+			<div class="sapphire-table__table-cell-inner">
+				<template v-if="slotsName">
+					<slot
+						:name="slotsName"
+						v-bind="{
+							row: rowInfo.rowData,
+							column: {
+								...colData,
+								field: colData.colKey,
+								property: colData.colKey,
+								params: colData.filterParams,
+							},
+							colIndex: props.rowIndex,
+							rowIndex: props.rowIndex,
+							key: colData.colKey,
+							formatValue: cellFormatValue,
+						}"
+					></slot>
+				</template>
+				<template v-else>
+					{{ cellFormatValue }}
+				</template>
+			</div>
 		</template>
 	</div>
 </template>
 
 <script lang="ts" setup>
 import type {
+	ICellRenderCallback,
 	IColumnRenderItem,
+	IGridCellSpan,
+	IGridDescribe,
 	IRowRenderItem,
 	ITableColumn,
 	ITableFormats,
 } from '@sapphire-table/core';
-import { inject, toRaw } from 'vue';
+import type { CSSProperties } from 'vue';
+import { computed, inject, type Ref } from 'vue';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import CheckBox from '../components/CheckBox.vue';
@@ -87,11 +83,21 @@ interface ITableCellProps {
 	columnInfo: IColumnRenderItem;
 	rowIndex: number;
 	columnIndex: number;
+	cellRender?: ICellRenderCallback;
+	position: 'left' | 'body' | 'right';
+	stripe?: boolean;
 }
 
 const props = defineProps<ITableCellProps>();
 
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
+
+const targetGrid: Ref<IGridDescribe> =
+	props.position === 'body'
+		? table.bodyGrid
+		: props.position === 'left'
+			? table.leftGrid
+			: table.rightGrid;
 
 /**
  * Formats the cell value based on the column's formatter function.
@@ -109,7 +115,6 @@ const getValueByFormat = (value: IRowRenderItem, col: ITableColumn) => {
 	}
 	let formatter = col.formatter;
 	let formatterValue = value.rowData[col.colKey];
-	const targetValue = toRaw(value);
 	const formatCache = value.formatCache;
 
 	// Check if the value is already cached and return it if enabled
@@ -153,10 +158,87 @@ const getValueByFormat = (value: IRowRenderItem, col: ITableColumn) => {
 	return formatterValue;
 };
 
+const cellSpan = computed<IGridCellSpan>(() => {
+	return (
+		targetGrid.value.cellSpans[props.rowIndex]?.[props.columnIndex] || { colSpan: 1, rowSpan: 1 }
+	);
+});
+
 const colInfo = props.columnInfo;
+
 const colData = colInfo.column;
 
 const slotsName = colData.slots?.default;
+
+const selectionClassNames = computed(() => {
+	let cellClassNames: Record<string, boolean> = {
+		['tools']: !!colData.type,
+	};
+	if (targetGrid.value.selectCell[props.rowIndex]?.[props.columnIndex]) {
+		cellClassNames['sapphire-table__cell--selection'] = true;
+	} else {
+		cellClassNames['sapphire-table__cell--unselection'] = true;
+	}
+	if (!cellClassNames['tools']) {
+		cellClassNames[`align-${props.columnInfo.column.align || 'left'}`] = true;
+	}
+	if (props.stripe) {
+		cellClassNames['is-stripe'] = props.rowIndex % 2 === 1;
+	}
+	return cellClassNames;
+});
+
+const renderCellStyle = computed<CSSProperties>(() => {
+	let height = props.rowInfo.renderRowHeight;
+	let width = props.columnInfo.renderWidth;
+	if (cellSpan.value.rowSpan > 1) {
+		height = 0;
+		for (let index = props.rowIndex; index < props.rowIndex + cellSpan.value.rowSpan; index++) {
+			height += table.tableRowData.value[index].renderRowHeight;
+		}
+	}
+	if (cellSpan.value.colSpan > 1) {
+		width = 0;
+		for (
+			let index = props.columnIndex;
+			index < props.columnIndex + cellSpan.value.colSpan;
+			index++
+		) {
+			width += targetGrid.value.gridColumns[index].renderWidth;
+		}
+	}
+	const borderStyles: CSSProperties = {
+		borderTop: undefined,
+		borderLeft: undefined,
+		borderRight: undefined,
+		borderBottom: undefined,
+	};
+	const selectionData = targetGrid.value.selectCell[props.rowIndex]?.[props.columnIndex];
+	if (selectionData) {
+		const { top, left, right, bottom } = selectionData;
+		const borderStyle = '1px solid var(--sapphire-selection-border-color)';
+		if (top) {
+			borderStyles.borderTop = borderStyle;
+		}
+		if (left) {
+			borderStyles.borderLeft = borderStyle;
+		}
+		if (right) {
+			borderStyles.borderRight = borderStyle;
+		}
+		if (bottom) {
+			borderStyles.borderBottom = borderStyle;
+		}
+	}
+	return {
+		width: width + 'px',
+		transform: `translateX(${props.columnInfo.renderOffset}px)`,
+		height: height + 'px',
+		zIndex: cellSpan.value.colSpan > 1 && cellSpan.value.rowSpan > 1 ? 1 : undefined,
+		visibility: cellSpan.value.rowSpan === 0 || cellSpan.value.rowSpan === 0 ? 'hidden' : undefined,
+		...borderStyles,
+	};
+});
 
 const cellFormatValue = getValueByFormat(props.rowInfo, colData);
 

@@ -112,45 +112,61 @@ export interface IRenderInfo {
 	renderColumnEnd: number;
 }
 
+/**
+ * Represents a row item for rendering in a table.
+ *
+ * @template D - The type of the row data.
+ */
 export interface IRowRenderItem<D = any> {
 	/**
-	 * 行数据
+	 * The row data.
 	 */
 	rowData: D;
+
 	/**
-	 * 展开高度
+	 * The height of the row when it is expanded.
 	 */
 	expandHeight: number;
+
 	/**
-	 * 渲染偏移量
+	 * The vertical offset of the row from the top of the table.
 	 */
 	renderOffset: number;
+
 	/**
-	 * 行高度
+	 * The height of the row when it is not expanded.
 	 */
 	rowHeight: number;
+
 	/**
-	 * 渲染高度
+	 * The height of the row when it is rendered.
 	 */
 	renderRowHeight: number;
+
 	/**
-	 * 渲染内容计算缓存，针对函数计算的结果，可以设置不启用该缓存，
-	 * 否在列表在第一次渲染的时候使用的是函数返回值，即format,会进行结果缓存，进行结果重用
+	 * A cache for storing the results of function calculations, such as formatters.
+	 * This can help improve performance by avoiding redundant calculations.
 	 */
 	formatCache: D;
+
 	/**
-	 * 是否选中
+	 * Indicates whether the row is selected.
 	 */
 	selection: boolean;
+
 	/**
-	 * 是否展开
+	 * Indicates whether the row is expanded.
 	 */
 	expand: boolean;
+
 	/**
-	 * 展开内容的参数存放
+	 * Additional data for the expanded content.
 	 */
 	expandInnerData: IExpandParams;
 
+	/**
+	 * A unique key for the expanded content.
+	 */
 	expandRenderKey?: string;
 }
 
@@ -191,17 +207,26 @@ export interface ILoadDataRequestParams {
 	filter: IFilterParams[];
 }
 
+/**
+ * Represents the configuration for a table, including data loading and expansion settings.
+ *
+ * @template ExpandData - The type of the expand data, defaulted to `IExpandParams<ExpandSource>`.
+ * @template Source - The type of the source data, defaulted to `any`.
+ * @template ExpandSource - The type of the expand source data, defaulted to `any`.
+ */
 export interface ITableConfig<
 	ExpandData extends IExpandParams<ExpandSource> = any,
 	Source = any,
 	ExpandSource = any,
 > {
 	/**
-	 * 表格加载数据
+	 * A method for loading data into the table. It takes an `ILoadDataRequestParams` object as a parameter
+	 * and returns a Promise that resolves to an array of `Source` objects.
 	 */
 	dataLoadMethod: (params: ILoadDataRequestParams) => Promise<Source[]>;
+
 	/**
-	 * 表格展开配置
+	 * An optional configuration for expanding rows in the table. It is of type `ITableExpandConfig<ExpandData, ExpandSource>`.
 	 */
 	expandConfig?: ITableExpandConfig<ExpandData, ExpandSource>;
 }
@@ -213,14 +238,48 @@ export interface IExpandParams<Data = any> {
 	rowIndex?: number;
 }
 
+/**
+ * Represents the configuration for a table, including data loading and expansion settings.
+ *
+ * @template ExpandData - The type of the expand data, defaulted to `IExpandParams<ExpandSource>`.
+ * @template Source - The type of the source data, defaulted to `any`.
+ * @template ExpandSource - The type of the expand source data, defaulted to `any`.
+ */
+export interface ITableConfig<
+	ExpandData extends IExpandParams<ExpandSource> = any,
+	Source = any,
+	ExpandSource = any,
+> {
+	/**
+	 * A method for loading data into the table. It takes an `ILoadDataRequestParams` object as a parameter
+	 * and returns a Promise that resolves to an array of `Source` objects.
+	 */
+	dataLoadMethod: (params: ILoadDataRequestParams) => Promise<Source[]>;
+
+	/**
+	 * An optional configuration for expanding rows in the table. It is of type `ITableExpandConfig<ExpandData, ExpandSource>`.
+	 */
+	expandConfig?: ITableExpandConfig<ExpandData, ExpandSource>;
+}
+
+/**
+ * Represents the configuration for expanding rows in a table.
+ *
+ * @template ExpandData - The type of the expand data, defaulted to `IExpandParams<ExpandSource>`.
+ * @template ExpandSource - The type of the expand source data, defaulted to `any`.
+ */
 export interface ITableExpandConfig<
 	ExpandData extends IExpandParams<ExpandSource> = any,
 	ExpandSource = any,
 > {
 	/**
-	 * 加载数据方法
-	 * @param params
-	 * @param rowIndex
+	 * A method for loading data into the expanded rows. It takes an `ExpandData` object and an `ILoadDataRequestParams` object as parameters
+	 * and returns a Promise that resolves to `void` or `undefined`.
+	 *
+	 * @param params - An object containing the expand data and the table's load data request parameters.
+	 * @param rowIndex - The index of the row for which the expand data is being loaded.
+	 *
+	 * @returns A Promise that resolves to `void` or `undefined`.
 	 */
 	dataLoadMethod: (
 		params: ExpandData & {
@@ -228,105 +287,151 @@ export interface ITableExpandConfig<
 		},
 		tableParams: ILoadDataRequestParams
 	) => Promise<void> | void;
+
 	/**
-	 * 展开默认数据
+	 * The default expand data to be used when expanding rows.
 	 */
 	expandDefaultParams: ExpandData;
 }
 
+/**
+ * Represents an instance of a table, providing methods for interacting with the table.
+ *
+ * @template Source - The type of the source data, defaulted to `any`.
+ */
 export interface ITableInstance<Source = any> {
 	/**
-	 * 重新加载表格数据，在配置了config加载项的时候才能进行使用
+	 * Reloads the table data, which can only be used when the `config` loading item is configured.
 	 * @see ITableConfig
 	 */
 	loadData: () => Promise<void> | void;
+
 	/**
-	 * 重新加载展开数据
-	 * @param rowIndex
+	 * Reloads the expanded data for a specific row.
+	 * @param rowIndex - The index of the row for which the expanded data is being reloaded.
 	 */
 	reloadRowExpand: (rowIndex: number) => void;
+
 	/**
-	 * 展开行
-	 * @param indexOrSearchCallback 行index或者数据搜索回调
+	 * Expands a row in the table.
+	 * @param indexOrSearchCallback - The index of the row or a callback function to search for the row data.
 	 */
 	setRowExpand: (indexOrSearchCallback: number | ((data: Source) => boolean)) => void;
+
 	/**
-	 * 获取选中行数据
+	 * Retrieves the selected row data.
+	 * @returns An array of selected row data.
 	 */
 	getSelectionData: () => Source[];
+
 	/**
-	 * 清除选中项
+	 * Clears the selected items in the table.
 	 */
 	clearSelection: () => void;
+
 	/**
-	 * 设置默认选中项
-	 * @param selectData
-	 * @param key
+	 * Sets the default selected items in the table.
+	 * @param selectData - The array of selected row data.
+	 * @param key - The key used to identify the selected items.
 	 */
 	setDefaultSelection: (selectData: Source[], key: string) => void;
+
 	/**
-	 * 设置行选中状态
-	 * @param rowIndex
-	 * @param action
+	 * Sets the selection status of a specific row in the table.
+	 * @param rowIndex - The index of the row.
+	 * @param action - The action to perform on the selection status (true for selecting, false for deselecting).
 	 */
 	setRowSelection: (rowIndex: number, action: boolean) => void;
+
 	/**
-	 * 列表滚动到指定行到可视区域
-	 * @param indexOrSearchCallback 行index或者数据搜索回调
+	 * Scrolls the table to the specified row and makes it visible in the viewport.
+	 * @param indexOrSearchCallback - The index of the row or a callback function to search for the row data.
 	 */
 	scrollToRow: (indexOrSearchCallback: number | ((data: Source) => boolean)) => void;
 
 	/**
-	 * 筛选控制实例
+	 * The filter control instance.
 	 */
 	filterInstance: IFilterInstance;
 }
 
+/**
+ * Represents an instance for managing and interacting with table filters.
+ * This interface provides methods for resetting, closing, clearing, confirming, and updating filter options.
+ */
 export interface IFilterInstance {
 	/**
-	 * 重置指定筛选项
-	 * @param colKey
+	 * Resets the specified filter option.
+	 * @param colKey - The key of the column for which the filter option is being reset.
 	 */
 	resetFilter: (colKey: string) => void;
+
 	/**
-	 * 关闭过滤的弹窗
+	 * Closes the filter dialog.
 	 */
 	closeFilterDialog: () => void;
+
 	/**
-	 * 清除所有的筛选数据
+	 * Clears all filter data.
 	 */
 	clearAllFilter: () => void;
+
 	/**
-	 * 确认筛选，触发筛选事件
+	 * Confirms the filter, triggering the filter event.
 	 */
 	confirmFilter: () => void;
+
 	/**
-	 * 更新筛选数据
-	 * @param colKey
-	 * @param filterValue
+	 * Updates the filter data for the specified column.
+	 * @param colKey - The key of the column for which the filter data is being updated.
+	 * @param filterValue - The new value for the filter.
 	 */
 	updateFilter: (colKey: string, filterValue: any) => void;
 }
 
+/**
+ * An interface representing an instance for managing and interacting with table expansions.
+ *
+ * @remarks
+ * This interface provides methods for reloading expanded data.
+ */
 export interface IExpandInstance {
 	/**
-	 * 重新加载展开数据
+	 * Reloads the expanded data.
+	 *
+	 * @returns A Promise that resolves to `void` or `undefined` when the data is successfully reloaded.
 	 */
 	reloadData: () => Promise<void> | void;
 }
 
+/**
+ * Represents parameters used for filtering data in a table.
+ *
+ * @remarks
+ * This interface is used to store and manage filter parameters, such as the filter value, type,
+ * custom data, and optional property.
+ */
 export interface IFilterParams {
-	value: any;
 	/**
-	 * 筛选类型
+	 * The value used for filtering.
+	 */
+	value: any;
+
+	/**
+	 * The type of filter being applied.
 	 */
 	type: string;
+
 	/**
-	 * 自定义数据
+	 * Custom data associated with the filter.
 	 */
 	customData: any;
+
 	/**
-	 * 筛选字段名称
+	 * The property or field name being filtered.
+	 *
+	 * @remarks
+	 * This property is optional and may not be present in all filter parameter objects.
 	 */
 	property?: string;
 }
@@ -403,6 +508,25 @@ export interface IGridDescribe {
 	 * The last update task, represented as a timeout ID.
 	 */
 	lastUpdateTask: ReturnType<typeof setTimeout> | undefined;
+
+	/**
+	 * A record representing the selected cells in the grid.
+	 * The keys are row indices, and the values are records representing the selected cells in each row.
+	 */
+	selectCell: Record<number, Record<number, ICellBorderInfo>>;
+
+	/**
+	 * A record representing the cell spans in the grid.
+	 * The keys are row indices, and the values are records representing the cell spans in each row.
+	 */
+	cellSpans: Record<number, Record<number, IGridCellSpan>>;
+}
+
+export interface ICellBorderInfo {
+	top: boolean;
+	left: boolean;
+	right: boolean;
+	bottom: boolean;
 }
 
 export interface IScrollOffset {
@@ -580,3 +704,92 @@ export interface ITableDescribe {
 	 */
 	selectAll: boolean;
 }
+
+/**
+ * Represents a rectangle with x, y, width, and height properties.
+ */
+export type Rectangle = {
+	/**
+	 * The x-coordinate of the top-left corner of the rectangle.
+	 */
+	x: number;
+
+	/**
+	 * The y-coordinate of the top-left corner of the rectangle.
+	 */
+	y: number;
+
+	/**
+	 * The width of the rectangle.
+	 */
+	width: number;
+
+	/**
+	 * The height of the rectangle.
+	 */
+	height: number;
+};
+
+/**
+ * Represents information about a cell in a table, including its row and column indices,
+ * as well as its rowspan and colspan.
+ */
+export type CellInfo = {
+	/**
+	 * The index of the row that contains the cell.
+	 */
+	cellRow: number;
+
+	/**
+	 * The index of the column that contains the cell.
+	 */
+	cellCol: number;
+
+	/**
+	 * The number of rows that the cell spans.
+	 */
+	rowSpan: number;
+
+	/**
+	 * The number of columns that the cell spans.
+	 */
+	colSpan: number;
+};
+
+/**
+ * Represents the rowspan and colspan of a cell in a grid.
+ */
+export interface IGridCellSpan {
+	/**
+	 * The number of rows that the cell spans.
+	 */
+	rowSpan: number;
+
+	/**
+	 * The number of columns that the cell spans.
+	 */
+	colSpan: number;
+}
+
+/**
+ * A callback function used to determine the rowspan and colspan of a cell in the table.
+ *
+ * @remarks
+ * This function is used to handle scenarios where a cell spans multiple rows or columns.
+ * It takes the row and column render items, along with their respective indices, as parameters.
+ * The function should return an object containing the rowspan and colspan values for the cell.
+ * If the cell does not span any rows or columns, the function should return `undefined`.
+ *
+ * @param row - The row render item for the cell.
+ * @param column - The column render item for the cell.
+ * @param rowIndex - The index of the row in the table.
+ * @param columnIndex - The index of the column in the table.
+ *
+ * @returns An object containing the rowspan and colspan values for the cell, or `undefined` if the cell does not span any rows or columns.
+ */
+export type ICellRenderCallback = (
+	row: IRowRenderItem,
+	column: IColumnRenderItem,
+	rowIndex: number,
+	columnIndex: number
+) => { rowSpan: number; colSpan: number } | undefined;

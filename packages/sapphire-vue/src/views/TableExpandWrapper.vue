@@ -4,7 +4,6 @@
 		:style="{
 			height: props.rowData.expandHeight + 'px',
 			width: table.bodyWidth.value + 'px',
-			marginTop: props.rowData.renderRowHeight + 'px',
 			zIndex: 8,
 			opacity: props.rowData.expand ? 1 : 0,
 		}"

@@ -11,8 +11,7 @@ import type {
 	ITableConfig,
 	ITableFormats,
 } from '@sapphire-table/core';
-import type { JSX } from 'react';
-
+import type { ReactNode } from 'react';
 export interface ITableProps<T = any> extends PropsWithSlots {
 	/**
 	 * Table data. Can be replaced with a loading method.
@@ -87,13 +86,11 @@ export interface ITableExpandSlotsParams {
 	config: ITableConfig;
 }
 
-export type SapphireExpandInnerSlot = (params: ITableExpandSlotsParams) => JSX.Element;
-export type SapphireLoadingSlot = (loading?: boolean) => JSX.Element;
-export type SapphireTableCellSlot = (params: ITableCellSlotsParams) => JSX.Element;
-export type SapphireHeaderSlot = (params: ITableColumn) => JSX.Element;
-export type SapphireFilterSlot = (
-	params: IFilterData & { instance: IFilterInstance }
-) => JSX.Element;
+export type SapphireExpandInnerSlot = (params: ITableExpandSlotsParams) => ReactNode;
+export type SapphireLoadingSlot = (loading?: boolean) => ReactNode;
+export type SapphireTableCellSlot = (params: ITableCellSlotsParams) => ReactNode;
+export type SapphireHeaderSlot = (params: ITableColumn) => ReactNode;
+export type SapphireFilterSlot = (params: IFilterData & { instance: IFilterInstance }) => ReactNode;
 
 export interface PropsWithSlots {
 	slots?: {

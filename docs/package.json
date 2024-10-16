@@ -74,7 +74,7 @@
   },
   "dependencies": {
     "dumi-theme-antd": "^0.4.2",
-    "@sapphire-table/sapphire-vue": "./packages/sapphire-vue",
-    "@sapphire-table/core": "./packages/core"
+    "@sapphire-table/sapphire-vue": "workspace:*",
+    "@sapphire-table/core": "workspace:*"
   }
 }

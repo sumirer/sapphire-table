@@ -148,7 +148,7 @@ export const TableRow: FC<ITableRowProps> = (props) => {
 								instance: expandInstance,
 								config: expandConfig,
 							})
-						: null}
+						: undefined}
 				</TableExpandWrapper>
 			) : null}
 		</div>
