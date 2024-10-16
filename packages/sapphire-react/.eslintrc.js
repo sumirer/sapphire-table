@@ -4,7 +4,7 @@ module.exports = {
 		'plugin:prettier/recommended',
 		'plugin:@typescript-eslint/recommended',
 	],
-	plugins: ['react', '@typescript-eslint'],
+	plugins: ['react', '@typescript-eslint', 'react-hooks'],
 	parser: '@typescript-eslint/parser',
 	rules: {
 		'react/jsx-uses-react': 'off',

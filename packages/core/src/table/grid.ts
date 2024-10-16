@@ -1,11 +1,15 @@
 import type {
+	CellInfo,
+	ICellRenderCallback,
 	IColumnRenderItem,
 	IFilterParams,
 	IGridDescribe,
 	IScrollOffset,
 	ITableColumns,
+	Rectangle,
 } from '../types/types';
 import { deepClone } from '../utils/utils';
+import type { IGridCellSpan } from '../types/types';
 
 /**
  * Creates a new instance of `IGridDescribe` with default values.
@@ -31,6 +35,8 @@ export function createGridDescribe(): IGridDescribe {
 		verticalRenderFillDistance: 100,
 		horizontalRenderFillDistance: 100,
 		lastUpdateTask: undefined,
+		selectCell: {},
+		cellSpans: {},
 	};
 }
 
@@ -326,4 +332,111 @@ function doNumberRangesOverlap(range1: [number, number], range2: [number, number
 		(range2[0] >= range1[0] && range2[0] <= range1[1]) ||
 		(range2[1] >= range1[0] && range2[1] <= range1[1])
 	);
+}
+
+/**
+ * Checks if two rectangles intersect.
+ * This function takes two rectangles as input and determines if they intersect.
+ * An intersection occurs when any part of one rectangle overlaps with any part of the other rectangle.
+ * @param rect1
+ * @param rect2
+ */
+export function doRectanglesIntersect(rect1: Rectangle, rect2: Rectangle): boolean {
+	if (rect2.x + rect2.width <= rect1.x) {
+		return false;
+	}
+	if (rect2.x >= rect1.x + rect1.width) {
+		return false;
+	}
+	if (rect2.y + rect2.height <= rect1.y) {
+		return false;
+	}
+	return rect2.y < rect1.y + rect1.height;
+}
+
+/**
+ * Calculates the selection rectangle based on the given start and end cell information.
+ *
+ * @param cellStart - The cell information representing the start of the selection.
+ * @param cellEnd - The cell information representing the end of the selection.
+ *
+ * @returns An object containing the start and end coordinates of the selection rectangle.
+ * - `startX`: The row index of the start of the selection rectangle.
+ * - `startY`: The column index of the start of the selection rectangle.
+ * - `endX`: The row index of the end of the selection rectangle.
+ * - `endY`: The column index of the end of the selection rectangle.
+ *
+ * @remarks
+ * This function takes into account the row and column spans of the cells to calculate the selection rectangle.
+ * If the start cell is positioned after the end cell, the function adjusts the row and column indices accordingly.
+ */
+export function getGridSelectionRect(cellStart: CellInfo, cellEnd: CellInfo) {
+	let useRowSpan = cellEnd.rowSpan;
+	let useColSpan = cellEnd.colSpan;
+	const result = {
+		startX: Math.min(cellStart.cellRow, cellEnd.cellRow),
+		startY: Math.min(cellStart.cellCol, cellEnd.cellCol),
+		endX: Math.max(cellStart.cellRow, cellEnd.cellRow),
+		endY: Math.max(cellStart.cellCol, cellEnd.cellCol),
+	};
+	if (cellStart.cellRow > result.startX || cellStart.cellCol > result.startY) {
+		useRowSpan = cellStart.rowSpan;
+		useColSpan = cellStart.colSpan;
+	}
+	result.endX += useRowSpan;
+	result.endY += useColSpan;
+	return result;
+}
+
+/**
+ * Computes the row and column spans for each cell in the grid.
+ *
+ * @param describe - The grid description object containing necessary information for rendering and layout.
+ * @param computeCallback - An optional callback function that can be used to customize the row and column spans for each cell.
+ *
+ * @remarks
+ * This function iterates through each row and column in the grid, and calculates the row and column spans for each cell.
+ * If a `computeCallback` function is provided, it will be used to customize the row and column spans for each cell.
+ * The calculated row and column spans are stored in the `cellSpans` property of the `describe` object.
+ */
+export function computeGridCellSpans(
+	describe: IGridDescribe,
+	computeCallback?: ICellRenderCallback
+) {
+	const spans: Record<number, Record<number, IGridCellSpan>> = {};
+	const rowLength = describe.gridRows.length;
+	const colLength = describe.gridColumns.length;
+	for (let rowIndex = 0; rowIndex < rowLength; rowIndex++) {
+		const rowData = describe.gridRows[rowIndex];
+		for (let colIndex = 0; colIndex < colLength; colIndex++) {
+			const colData = describe.gridColumns[colIndex];
+			const computeSpans = computeCallback?.(rowData, colData, rowIndex, colIndex) || {
+				rowSpan: 1,
+				colSpan: 1,
+			};
+			if (spans[rowIndex]) {
+				if (!spans[rowIndex][colIndex]) {
+					spans[rowIndex][colIndex] = computeSpans;
+				}
+			} else {
+				spans[rowIndex] = {};
+				spans[rowIndex][colIndex] = computeSpans;
+			}
+			if (computeSpans.colSpan > 1 && computeSpans.rowSpan > 1) {
+				for (let rIndex = rowIndex; rIndex < rowIndex + computeSpans.rowSpan; rIndex++) {
+					for (let cIndex = colIndex; cIndex < colIndex + computeSpans.colSpan; cIndex++) {
+						if (rIndex !== rowIndex || cIndex !== colIndex) {
+							if (spans[rIndex]) {
+								spans[rIndex][cIndex] = { rowSpan: 0, colSpan: 0 };
+							} else {
+								spans[rIndex] = {};
+								spans[rIndex][cIndex] = { rowSpan: 0, colSpan: 0 };
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	describe.cellSpans = spans;
 }

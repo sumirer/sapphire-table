@@ -1,5 +1,5 @@
 <template>
-	<div ref="viewportRef" class="sapphire-table" :key="updateKey">
+	<div ref="viewportRef" class="sapphire-table">
 		<slot name="sapphireLoading" :loading="tableLoading">
 			<SapphireLoading v-if="tableLoading" />
 		</slot>
@@ -18,6 +18,7 @@
 		>
 			<div
 				class="sapphire-table__table-scroll-body-wrapper"
+				:class="{ 'sapphire-table__unselectable': props.rangeSelection }"
 				:style="{
 					width:
 						table.tableContentWidth.value +
@@ -40,12 +41,15 @@
 						overflow: 'visible',
 						zIndex: 5,
 					}"
+					:range-selection="props.rangeSelection"
 				>
 					<RowRenderDelegation
 						:columns="table.leftColumns.value"
 						:computed-row-style="props.computedRowStyle"
 						position="left"
 						with-expand
+						:cell-render="props.leftGridCellRender"
+						:stripe="props.stripe"
 					>
 						<template v-if="slots.sapphireExpandInner" #sapphireExpandInner="bindValue">
 							<slot name="sapphireExpandInner" v-bind="bindValue"></slot>
@@ -61,11 +65,14 @@
 						width: table.tableContentWidth.value + 'px',
 						height: table.tableContentHeight.value + 'px',
 					}"
+					:ref="cellSelection.bodyRef"
 				>
 					<RowRenderDelegation
 						:columns="table.bodyColumns.value"
 						:computed-row-style="props.computedRowStyle"
 						position="body"
+						:cell-render="props.cellRender"
+						:stripe="props.stripe"
 					>
 						<template v-for="(_, name) in usageSlots" :key="name" v-slot:[name]="bindValue">
 							<slot :name="name" v-bind="bindValue"></slot>
@@ -78,11 +85,14 @@
 					:width="table.rightFixedWidth.value + 'px'"
 					position="right"
 					:height="table.tableContentHeight.value + 'px'"
+					:range-selection="props.rangeSelection"
 				>
 					<RowRenderDelegation
 						:columns="table.rightColumns.value"
 						:computed-row-style="props.computedRowStyle"
 						position="right"
+						:cell-render="props.rightGridCellRender"
+						:stripe="props.stripe"
 					>
 						<template v-for="(_, name) in usageSlots" :key="name" v-slot:[name]="bindValue">
 							<slot :name="name" v-bind="bindValue"></slot>
@@ -99,6 +109,7 @@ import { computed, nextTick, onMounted, provide, ref, useSlots, watch } from 'vu
 import RowRenderDelegation from './RowRenderDelegation.vue';
 import { useVirtualTable } from '../hooks/useVirtualTable';
 import type {
+	ICellRenderCallback,
 	IExpandParams,
 	IFilterParams,
 	IRowRenderItem,
@@ -117,6 +128,7 @@ import TableHeaderResizeController from './TableHeaderResizeController.vue';
 import TableFilter from './TableFilter.vue';
 import type { IOpenFilterParams, ITableFilterInstance } from '../types/types';
 import SapphireLoading from '../components/SapphireLoading.vue';
+import { useGridSelection } from '../hooks/useGridSelection';
 
 interface ITableProps<T = any> {
 	/**
@@ -169,9 +181,19 @@ interface ITableProps<T = any> {
 
 	verticalRenderFillDistance?: number;
 	horizontalRenderFillDistance?: number;
+
+	cellRender?: ICellRenderCallback;
+
+	leftGridCellRender?: ICellRenderCallback;
+
+	rightGridCellRender?: ICellRenderCallback;
+
+	stripe?: boolean;
+
+	rangeSelection?: boolean;
 }
 
-// const emit = defineEmits(['filter', 'sort', 'update:loading'])
+// const emit = defineEmits(['filter', 'sort', 'update:loading']);
 
 const emit = defineEmits<{
 	/**
@@ -197,8 +219,6 @@ const bodyWrapperRef = ref<HTMLDivElement>();
 
 const tableFilterRef = ref<ITableFilterInstance>();
 
-const updateKey = ref(Math.random().toString());
-
 const tableLoading = computed({
 	get() {
 		return props.loading;
@@ -218,6 +238,8 @@ const usageSlots = Object.keys(slots).reduce((previousValue, currentValue) => {
 }, {} as any);
 
 const table = useVirtualTable(props.config);
+
+const cellSelection = useGridSelection(table.bodyGrid.value, props.rangeSelection);
 
 provide(TABLE_PROVIDER_KEY, table);
 
@@ -278,6 +300,11 @@ watch(
 	() => props.columns,
 	(newColumn) => {
 		table.updateTableColumn(newColumn);
+		table.updateTableCellSpan(
+			props.leftGridCellRender,
+			props.cellRender,
+			props.rightGridCellRender
+		);
 		nextTick(() => {
 			testScrollBarVisibleChange();
 			table.updatePingAction();
@@ -308,6 +335,7 @@ const updateNewData = (data: typeof props.data) => {
 		(props.config?.expandConfig?.expandDefaultParams || {}) as IExpandParams,
 		props.presetHeight || 50
 	);
+	table.updateTableCellSpan(props.leftGridCellRender, props.cellRender, props.rightGridCellRender);
 	resetTableAction();
 	nextTick(() => {
 		testScrollBarVisibleChange();
@@ -365,41 +393,14 @@ if (props.data) {
 }
 
 defineExpose<ITableInstance>({
-	/**
-	 * @public
-	 */
 	setRowExpand: table.handleUpdateExpandRow,
-	/**
-	 * @public
-	 */
 	scrollToRow: handleScrollToRow,
-	/**
-	 * @public
-	 */
 	reloadRowExpand: table.handleReloadRowData,
-	/**
-	 * @public
-	 */
 	getSelectionData: table.getSelectionData,
-	/**
-	 * @public
-	 */
 	clearSelection: table.clearAllSelection,
-	/**
-	 * @public
-	 */
 	setRowSelection: table.handleRowSelect,
-	/**
-	 * @public
-	 */
 	setDefaultSelection: table.setDefaultSelection,
-	/**
-	 * @public
-	 */
 	loadData: handleLoadTableData,
-	/**
-	 * @public
-	 */
 	filterInstance: table.filterInstance,
 });
 </script>

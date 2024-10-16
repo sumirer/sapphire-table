@@ -1,4 +1,5 @@
 import type {
+	ICellRenderCallback,
 	IColumnRenderItem,
 	IExpandParams,
 	IFilterParams,
@@ -9,6 +10,7 @@ import type {
 	ITableDescribe,
 } from '../types/types';
 import {
+	computeGridCellSpans,
 	createGridDescribe,
 	ensureColumnWidthsFillSpace,
 	initializeGridColumns,
@@ -645,6 +647,30 @@ export function getTableAllFilterParams(describe: ITableDescribe) {
 	});
 	describe.filterParamsCache = filterParamsList;
 	return filterParamsList;
+}
+
+/**
+ * Updates the cell spans for all fixed areas (body, left, and right) in the table.
+ *
+ * @param describe - The table's description object containing various properties and configurations.
+ * @param leftRender - An optional callback function for rendering the left fixed area cells.
+ * @param bodyRender - An optional callback function for rendering the body cells.
+ * @param rightRender - An optional callback function for rendering the right fixed area cells.
+ *
+ * @remarks
+ * This function calls the `computeGridCellSpans` function for each fixed area (body, left, and right)
+ * with the corresponding grid and render callback function.
+ * The `computeGridCellSpans` function calculates and updates the cell spans for the specified grid and render callback.
+ */
+export function updateTableCellSpans(
+	describe: ITableDescribe,
+	leftRender?: ICellRenderCallback,
+	bodyRender?: ICellRenderCallback,
+	rightRender?: ICellRenderCallback
+) {
+	computeGridCellSpans(describe.bodyGrid, bodyRender);
+	computeGridCellSpans(describe.leftGrid, leftRender);
+	computeGridCellSpans(describe.rightGrid, rightRender);
 }
 
 /**

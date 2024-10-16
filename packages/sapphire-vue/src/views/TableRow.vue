@@ -4,14 +4,18 @@
 		:data-sapphireId="props.rowIndex"
 		:style="{
 			height: props.rowData.renderRowHeight + 'px',
-			transform: `translateY(${props.rowData.renderOffset + 'px'})`,
+			top: `${props.rowData.renderOffset + 'px'}`,
 			position: 'absolute',
-			willChange: 'transform',
+			willChange: 'top',
 		}"
 	>
 		<div
 			ref="columnRef"
 			:class="{ 'expand-wrapper-row-hover': isHover }"
+			:style="{
+				height: props.rowData.renderRowHeight + 'px',
+			}"
+			role="row"
 			@mouseenter="handleColumnHover"
 			@mouseleave="handleColumUnHover"
 		>
@@ -22,6 +26,9 @@
 					:column-info="props.columns[colIndex]"
 					:row-index="props.rowIndex"
 					:column-index="colIndex"
+					:cell-render="props.cellRender"
+					:position="props.position"
+					:stripe="props.stripe"
 				>
 					<template v-for="(_, name) in usageSlots" :key="name" v-slot:[name]="bindValue">
 						<slot :name="name" v-bind="bindValue"></slot>
@@ -51,6 +58,7 @@
 <script lang="ts" setup>
 import { computed, inject, ref, useSlots } from 'vue';
 import type {
+	ICellRenderCallback,
 	IColumnRenderItem,
 	IExpandInstance,
 	ILoadDataRequestParams,
@@ -69,6 +77,8 @@ interface ITableRowProps<T = any> {
 	computedRowStyle?: (row: IRowRenderItem<T>) => string;
 	position: 'left' | 'body' | 'right';
 	withExpand: boolean;
+	cellRender?: ICellRenderCallback;
+	stripe?: boolean;
 }
 
 const props = defineProps<ITableRowProps>();

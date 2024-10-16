@@ -8,6 +8,8 @@
 		:style="{ width: targetGrid.gridContentWidth + 'px' }"
 		:position="props.position"
 		:with-expand="props.withExpand"
+		:cell-render="props.cellRender"
+		:stripe="props.stripe"
 	>
 		<template v-for="(_, name) in slots" :key="name" v-slot:[name]="bindValue">
 			<slot :name="name" v-bind="bindValue"></slot>
@@ -19,7 +21,12 @@
 import TableRow from './TableRow.vue';
 import type { Ref } from 'vue';
 import { computed, inject, useSlots } from 'vue';
-import type { IColumnRenderItem, IGridDescribe, IRowRenderItem } from '@sapphire-table/core';
+import type {
+	ICellRenderCallback,
+	IColumnRenderItem,
+	IGridDescribe,
+	IRowRenderItem,
+} from '@sapphire-table/core';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 
@@ -28,6 +35,8 @@ interface IRowRenderDelegationProps {
 	columns: IColumnRenderItem[];
 	position: 'left' | 'body' | 'right';
 	withExpand?: boolean;
+	cellRender?: ICellRenderCallback;
+	stripe?: boolean;
 }
 
 const props = defineProps<IRowRenderDelegationProps>();

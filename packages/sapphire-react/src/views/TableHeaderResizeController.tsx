@@ -61,7 +61,7 @@ export const TableHeaderResizeController: FC<{ position: 'body' | 'left' | 'righ
 
 	const { update } = useUpdate();
 
-	const handleResizeStart = (event: MouseEvent, colIndex: number) => {
+	const handleResizeStart = (event: MouseEvent<HTMLDivElement>, colIndex: number) => {
 		console.log(event);
 		resizeControl.current.index = colIndex;
 		resizeControl.current.resizeStart = event.nativeEvent.x;
@@ -69,7 +69,7 @@ export const TableHeaderResizeController: FC<{ position: 'body' | 'left' | 'righ
 		update();
 	};
 
-	const handleResizeUpdate = (event: MouseEvent) => {
+	const handleResizeUpdate = (event: MouseEvent<HTMLDivElement>) => {
 		if (resizeControl.current.index < 0) {
 			return;
 		}

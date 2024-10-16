@@ -1,5 +1,6 @@
-import { nextTick, reactive, toRefs, watch } from 'vue';
+import { reactive, toRefs, watch } from 'vue';
 import type {
+	ICellRenderCallback,
 	IExpandParams,
 	IFilterInstance,
 	ILoadDataRequestParams,
@@ -32,6 +33,7 @@ import {
 	updateTableScrollOffset,
 	updateTableSize,
 	updateTableLayout as updateLayout,
+	updateTableCellSpans,
 } from '@sapphire-table/core';
 
 /**
@@ -318,6 +320,14 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 		updateLayout(tableDescribe);
 	};
 
+	const updateTableCellSpan = (
+		leftRender?: ICellRenderCallback,
+		bodyRender?: ICellRenderCallback,
+		rightRender?: ICellRenderCallback
+	) => {
+		updateTableCellSpans(tableDescribe, leftRender, bodyRender, rightRender);
+	};
+
 	const filterInstance: IFilterInstance = {
 		resetFilter: handleResetFilter,
 		closeFilterDialog: null as any,
@@ -348,6 +358,7 @@ export const useVirtualTable = (tableConfig?: ITableConfig) => {
 		updateScrollOffset,
 		updateTableLayout,
 		updateBodyRenderFillDistance,
+		updateTableCellSpan,
 	};
 };
 

@@ -10,6 +10,7 @@
 			width: props.width,
 			height: props.height,
 		}"
+		:ref="cellSelection.bodyRef"
 	>
 		<slot name="default"></slot>
 	</div>
@@ -19,11 +20,13 @@
 import { computed, inject } from 'vue';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
+import { useGridSelection } from '../hooks/useGridSelection';
 
 const props = defineProps<{
 	position: 'left' | 'right';
 	width: string;
 	height: string;
+	rangeSelection?: boolean;
 }>();
 
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
@@ -34,4 +37,9 @@ const showFixedAction = computed(() => {
 	}
 	return table.pingRight.value;
 });
+
+const cellSelection = useGridSelection(
+	props.position === 'left' ? table.leftGrid.value : table.rightGrid.value,
+	props.rangeSelection
+);
 </script>

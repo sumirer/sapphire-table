@@ -1,3 +1,3 @@
 import SapphireTable from './views/SapphireTable.vue';
 
-export { SapphireTable };
+export default SapphireTable;
