@@ -120,7 +120,7 @@ import type {
 	ITableFormats,
 	ITableInstance,
 } from '@sapphire-table/core';
-import { TABLE_PROVIDER_KEY } from '../constant/table';
+import { TABLE_PROVIDER_KEY, TABLE_PROVIDER_SELECTION_KEY } from '../constant/table';
 import '@sapphire-table/core/lib/style/index.css';
 import TableHeader from './TableHeader.vue';
 import TableColumnFixedWrapper from './TableColumnFixedWrapper.vue';
@@ -239,9 +239,11 @@ const usageSlots = Object.keys(slots).reduce((previousValue, currentValue) => {
 
 const table = useVirtualTable(props.config);
 
-const cellSelection = useGridSelection(table.bodyGrid.value, props.rangeSelection);
+const cellSelection = useGridSelection(table, props.rangeSelection);
 
 provide(TABLE_PROVIDER_KEY, table);
+
+provide(TABLE_PROVIDER_SELECTION_KEY, cellSelection);
 
 Object.assign(table.globalFormatter.value, props.formats || {});
 

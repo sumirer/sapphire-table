@@ -152,6 +152,7 @@ const tableCellRender: ICellRenderCallback = (row, column, rowIndex, columnIndex
       :loading="loading"
       :cell-render="tableCellRender"
       stripe
+      range-selection
     >
       <template #testSlots="{ formatValue }">
         {{ formatValue + '---custom' }}

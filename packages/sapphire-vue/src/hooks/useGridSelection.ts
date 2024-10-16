@@ -1,9 +1,14 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import type { ICellBorderInfo, IGridDescribe } from '@sapphire-table/core';
 import { doRectanglesIntersect, getGridSelectionRect } from '@sapphire-table/core';
+import type { VirtualTableType } from './useVirtualTable';
 
-export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
+export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: boolean) => {
 	const bodyRef = ref<HTMLDivElement>();
+
+	const leftRef = ref<HTMLDivElement>();
+
+	const rightRef = ref<HTMLDivElement>();
 
 	let startCell: HTMLElement | undefined = undefined;
 
@@ -27,7 +32,7 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 		return target && isCellElement(target) ? target : null;
 	};
 
-	const handleMouseDown = (event: MouseEvent) => {
+	const handleMouseDown = (event: MouseEvent, grid: IGridDescribe) => {
 		if (event.button !== 0) {
 			return;
 		}
@@ -36,7 +41,7 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 		const cell = getCellContent(target);
 		if (cell) {
 			const { row, col } = cell.dataset;
-			setCellSelectionAction(Number(row), Number(col), {
+			setCellSelectionAction(grid, Number(row), Number(col), {
 				bottom: true,
 				top: true,
 				left: true,
@@ -47,7 +52,9 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 	};
 
 	const removeAllSelected = () => {
-		grid.selectCell = {};
+		tableDescribe.leftGrid.value.selectCell = {};
+		tableDescribe.bodyGrid.value.selectCell = {};
+		tableDescribe.rightGrid.value.selectCell = {};
 	};
 
 	const getCellFromMouseEvent = (event: MouseEvent) => {
@@ -71,7 +78,7 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 		};
 	};
 
-	const handleMouseMove = (event: MouseEvent) => {
+	const handleMouseMove = (event: MouseEvent, grid: IGridDescribe) => {
 		if (startCell) {
 			const currentCell = getCellFromMouseEvent(event);
 			if (currentCell) {
@@ -90,12 +97,12 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 					startY: rsY,
 					endX: reX,
 					endY: reY,
-				} = setCellSelection(startX, startY, endX, endY);
+				} = setCellSelection(grid, startX, startY, endX, endY);
 				for (let rIndex = rsX; rIndex < reX; rIndex++) {
 					for (let cIndex = rsY; cIndex < reY; cIndex++) {
 						const cellSpan = grid.cellSpans[rIndex][cIndex];
 						if (cellSpan.rowSpan > 0 && cellSpan.colSpan > 0) {
-							setCellSelectionAction(rIndex, cIndex, {
+							setCellSelectionAction(grid, rIndex, cIndex, {
 								bottom: rIndex + cellSpan.rowSpan === reX,
 								top: rIndex === rsX,
 								left: cIndex === rsY,
@@ -108,7 +115,12 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 		}
 	};
 
-	const setCellSelectionAction = (row: number, col: number, border: ICellBorderInfo) => {
+	const setCellSelectionAction = (
+		grid: IGridDescribe,
+		row: number,
+		col: number,
+		border: ICellBorderInfo
+	) => {
 		if (grid.selectCell[row]) {
 			grid.selectCell[row][col] = border;
 		} else {
@@ -117,7 +129,13 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 		}
 	};
 
-	const setCellSelection = (startRow: number, startCol: number, endRow: number, endCol: number) => {
+	const setCellSelection = (
+		grid: IGridDescribe,
+		startRow: number,
+		startCol: number,
+		endRow: number,
+		endCol: number
+	) => {
 		const allCells = [
 			...(bodyRef.value?.querySelectorAll('div[data-row][data-col]') || []),
 		] as unknown as HTMLTableCellElement[];
@@ -140,7 +158,7 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 					}
 				)
 			) {
-				setCellSelectionAction(cellRow, cellCol, {
+				setCellSelectionAction(grid, cellRow, cellCol, {
 					bottom: cellRow === endRow,
 					top: cellRow === startRow,
 					left: cellCol === startCol,
@@ -178,7 +196,7 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 		});
 		if (maxX !== endRow || maxY !== endCol || minX !== startRow || minY !== startCol) {
 			// 递归获取附属的单元格，计算范围内被合并的范围，合并范围内所有的单元格
-			const { startX, startY, endX, endY } = setCellSelection(minX, minY, maxX, maxY);
+			const { startX, startY, endX, endY } = setCellSelection(grid, minX, minY, maxX, maxY);
 			minX = startX;
 			minY = startY;
 			maxX = endX;
@@ -204,21 +222,59 @@ export const useGridSelection = (grid: IGridDescribe, enabled?: boolean) => {
 		endCell = undefined;
 	};
 
+	const bindElementEvents = (
+		target: HTMLDivElement | undefined,
+		eventBinds: Record<string, (event: Event) => void>
+	) => {
+		Object.keys(eventBinds).forEach((key) => {
+			target?.addEventListener(key, eventBinds[key]);
+		});
+	};
+
+	const unbindElementEvents = (
+		target: HTMLDivElement | undefined,
+		eventBinds: Record<string, (event: Event) => void>
+	) => {
+		Object.keys(eventBinds).forEach((key) => {
+			target?.removeEventListener(key, eventBinds[key]);
+		});
+	};
+
+	const bodyEvents: Record<string, (event: Event) => void> = {
+		mousemove: (event) => handleMouseMove(event as MouseEvent, tableDescribe.bodyGrid.value),
+		mouseup: handleMouseUp,
+		mousedown: (event) => handleMouseDown(event as MouseEvent, tableDescribe.bodyGrid.value),
+	};
+
+	const leftEvents: Record<string, (event: Event) => void> = {
+		mousemove: (event) => handleMouseMove(event as MouseEvent, tableDescribe.leftGrid.value),
+		mouseup: handleMouseUp,
+		mousedown: (event) => handleMouseDown(event as MouseEvent, tableDescribe.leftGrid.value),
+	};
+
+	const rightEvents: Record<string, (event: Event) => void> = {
+		mousemove: (event) => handleMouseMove(event as MouseEvent, tableDescribe.rightGrid.value),
+		mouseup: handleMouseUp,
+		mousedown: (event) => handleMouseDown(event as MouseEvent, tableDescribe.rightGrid.value),
+	};
+
 	onMounted(() => {
 		if (enabled) {
-			bodyRef.value?.addEventListener('mousemove', handleMouseMove);
-			bodyRef.value?.addEventListener('mouseup', handleMouseUp);
-			bodyRef.value?.addEventListener('mousedown', handleMouseDown);
+			bindElementEvents(bodyRef.value, bodyEvents);
+			bindElementEvents(leftRef.value, leftEvents);
+			bindElementEvents(rightRef.value, rightEvents);
 		}
 	});
 
 	onBeforeUnmount(() => {
 		if (enabled) {
-			bodyRef.value?.removeEventListener('mousemove', handleMouseMove);
-			bodyRef.value?.removeEventListener('mouseup', handleMouseUp);
-			bodyRef.value?.removeEventListener('mousedown', handleMouseDown);
+			unbindElementEvents(bodyRef.value, bodyEvents);
+			unbindElementEvents(leftRef.value, leftEvents);
+			unbindElementEvents(rightRef.value, rightEvents);
 		}
 	});
 
-	return { bodyRef };
+	return { bodyRef, rightRef, leftRef };
 };
+
+export type GridSelectionType = ReturnType<typeof useGridSelection>;

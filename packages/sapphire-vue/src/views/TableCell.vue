@@ -9,6 +9,7 @@
 		:data-row="props.rowIndex"
 		:data-col="props.columnIndex"
 		:class="selectionClassNames"
+		tabindex="-1"
 	>
 		<template v-if="colData.type === 'expand'">
 			<slot name="sapphireExpandIcon" :expand="rowInfo.expand">
