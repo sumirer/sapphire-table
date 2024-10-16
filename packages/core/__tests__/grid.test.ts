@@ -85,6 +85,8 @@ function createGrid() {
 		verticalRenderFillDistance: 100,
 		horizontalRenderFillDistance: 100,
 		lastUpdateTask: undefined,
+		selectCell: {},
+		cellSpans: {},
 	};
 	return describe;
 }

@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "test": "lerna run test",
+    "test": "pnpm --filter=*core test",
     "build": "pnpm --filter=*core build && pnpm update \"@sapphire-table/*\" && pnpm --filter=./packages/sapphire-* build",
     "build:g": "pnpm -r build"
   },
