@@ -1,10 +1,10 @@
 <template>
 	<TableRow
-		v-for="renderRow in renderComputeIndex"
-		:key="table.renderUpdateKey.value + '_' + renderRow.key"
+		v-for="renderRowIndex in renderComputeIndex"
+		:key="table.renderUpdateKey.value + '_' + renderRowIndex"
 		:columns="props.columns"
-		:row-data="renderRow.data"
-		:row-index="renderRow.key"
+		:row-data="table.tableRowData.value[renderRowIndex]"
+		:row-index="renderRowIndex"
 		:style="{ width: targetGrid.gridContentWidth + 'px' }"
 		:position="props.position"
 		:with-expand="props.withExpand"
@@ -53,10 +53,7 @@ const targetGrid: Ref<IGridDescribe> =
 			: table.rightGrid;
 
 const renderComputeIndex = computed(() => {
-	const indexList: Array<{
-		key: number;
-		data: IRowRenderItem;
-	}> = [];
+	const indexList: Array<number> = [];
 	// empty
 	if (table.tableRowData.value.length === 0) {
 		return indexList;
@@ -66,10 +63,7 @@ const renderComputeIndex = computed(() => {
 		index <= table.bodyGrid.value.renderInfo.renderRowEnd;
 		index++
 	) {
-		indexList.push({
-			data: table.tableRowData.value[index],
-			key: index,
-		});
+		indexList.push(index);
 	}
 	return indexList;
 });

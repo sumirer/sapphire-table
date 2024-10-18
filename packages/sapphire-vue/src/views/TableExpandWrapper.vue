@@ -8,6 +8,10 @@
 			opacity: props.rowData.expand ? 1 : 0,
 		}"
 		ref="expandBodyRef"
+		@contextmenu="handleWrapperEventStop"
+		@mousemove="handleWrapperEventStop"
+		@mousedown="handleWrapperEventStop"
+		@mouseup="handleWrapperEventStop"
 	>
 		<div class="sapphire-table__expand-body">
 			<slot name="default"></slot>
@@ -41,6 +45,10 @@ const sizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
 		}
 	}
 });
+
+const handleWrapperEventStop = (event: Event) => {
+	event.stopPropagation();
+};
 
 onMounted(() => {
 	nextTick().then(() => {

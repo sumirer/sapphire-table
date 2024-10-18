@@ -1,28 +1,37 @@
 <template>
 	<div
-		class="header-title"
+		class="sapphire-table__header-cell"
 		:style="{
 			width: props.column.renderWidth + 'px',
 			left: props.column.renderOffset + 'px',
-		}"
-		:class="{
-			'with-action-icon': props.column.column.sort,
+			height: hasChildren ? props.column.deepLength * 40 + 'px' : '100%',
+			borderRight:
+				table.tableHeaderDeepLevel.value > 1 ? '1px solid var(--sapphire-border-color)' : undefined,
 		}"
 		@click="handleColumnClick($event, props.column.column)"
 	>
-		<div class="sapphire-table__table-header-container">
+		<div
+			class="sapphire-table__header-cell-content-wrapper"
+			:style="{
+				height: '40px',
+				borderBottom: hasChildren ? '1px solid var(--sapphire-border-color)' : undefined,
+			}"
+			:class="{ 'with-resize-tip': table.tableHeaderDeepLevel.value === 1 }"
+		>
 			<span
 				v-if="props.column.column.slots?.['header']"
-				class="header-cell-title"
-				:style="{ width: '100%' }"
+				class="sapphire-table__header-cell-content"
 			>
 				<slot :name="props.column.column.slots?.['header']" :column="props.column.column"></slot>
 			</span>
 			<span
 				v-else
-				:class="`header-cell-title align-${
+				:class="`sapphire-table__header-cell-content align-${
 					props.column.column.align === 'center' ? 'center' : 'left'
 				}`"
+				:style="{
+					textAlign: hasChildren ? 'center' : undefined,
+				}"
 			>
 				<template v-if="props.column.column.type === 'selection'">
 					<div class="vertical-center">
@@ -37,66 +46,75 @@
 					{{ props.column.column.title }}
 				</template>
 			</span>
+			<div
+				v-if="(props.column.column.sort || props.column.column.filter) && !hasChildren"
+				class="sapphire-table__table-header-tools"
+			>
+				<div v-if="props.column.column.sort" class="action-sort-icon">
+					<div
+						class="sort-up-icon"
+						:style="{
+							'--sort-default-color': `var(${
+								table.sortInfo.value.property === props.column.column.colKey &&
+								table.sortInfo.value.type === (props.column.column.sortValue || ['asc', 'desc'])[0]
+									? '--sapphire-primary-color'
+									: '--sapphire-gray-color'
+							})`,
+						}"
+						@click="(event) => handleSortChange(event, props.column.column, 'up')"
+					></div>
+					<div
+						class="sort-down-icon"
+						:style="{
+							'--sort-default-color': `var(${
+								table.sortInfo.value.property === props.column.column.colKey &&
+								table.sortInfo.value.type === (props.column.column.sortValue || ['asc', 'desc'])[1]
+									? '--sapphire-primary-color'
+									: '--sapphire-gray-color'
+							})`,
+						}"
+						@click="(event) => handleSortChange(event, props.column.column, 'down')"
+					></div>
+				</div>
+				<div v-if="props.column.column.filter" class="action-filter-icon" @click="handleOpenFilter">
+					<slot name="sapphireTableFilterIcon" :action="false">
+						<svg
+							class="action-filter-icon"
+							viewBox="0 -1 12 12"
+							xmlns="http://www.w3.org/2000/svg"
+							width="200"
+							height="200"
+						>
+							<path
+								:style="{
+									fill: `var(${
+										props.column.filterParams.value !== undefined
+											? '--sapphire-primary-color'
+											: '--sapphire-gray-color'
+									})`,
+								}"
+								d="M3.40215 8.32031C3.40215 8.52773 3.56855 8.69531 3.7748 8.69531H6.8498C7.05605 8.69531 7.22246 8.52773 7.22246 8.32031V6.02344H3.40215V8.32031ZM9.62597 0.304688H0.998631C0.711521 0.304688 0.532224 0.617578 0.676365 0.867188L3.26972 5.27344H7.35722L9.95058 0.867188C10.0924 0.617578 9.91308 0.304688 9.62597 0.304688Z"
+							></path>
+						</svg>
+					</slot>
+				</div>
+			</div>
 		</div>
-		<div
-			v-if="props.column.column.sort || props.column.column.filter"
-			class="sapphire-table__table-header-tools"
-		>
-			<div v-if="props.column.column.sort" class="action-sort-icon">
-				<div
-					class="sort-up-icon"
-					:style="{
-						'--sort-default-color': `var(${
-							table.sortInfo.value.property === props.column.column.colKey &&
-							table.sortInfo.value.type === (props.column.column.sortValue || ['asc', 'desc'])[0]
-								? '--sapphire-primary-color'
-								: '--sapphire-gray-color'
-						})`,
-					}"
-					@click="(event) => handleSortChange(event, props.column.column, 'up')"
-				></div>
-				<div
-					class="sort-down-icon"
-					:style="{
-						'--sort-default-color': `var(${
-							table.sortInfo.value.property === props.column.column.colKey &&
-							table.sortInfo.value.type === (props.column.column.sortValue || ['asc', 'desc'])[1]
-								? '--sapphire-primary-color'
-								: '--sapphire-gray-color'
-						})`,
-					}"
-					@click="(event) => handleSortChange(event, props.column.column, 'down')"
-				></div>
-			</div>
-			<div v-if="props.column.column.filter" class="action-filter-icon" @click="handleOpenFilter">
-				<slot name="sapphireTableFilterIcon" :action="false">
-					<svg
-						class="action-filter-icon"
-						viewBox="0 -1 12 12"
-						xmlns="http://www.w3.org/2000/svg"
-						width="200"
-						height="200"
-					>
-						<path
-							:style="{
-								fill: `var(${
-									props.column.filterParams.value !== undefined
-										? '--sapphire-primary-color'
-										: '--sapphire-gray-color'
-								})`,
-							}"
-							d="M3.40215 8.32031C3.40215 8.52773 3.56855 8.69531 3.7748 8.69531H6.8498C7.05605 8.69531 7.22246 8.52773 7.22246 8.32031V6.02344H3.40215V8.32031ZM9.62597 0.304688H0.998631C0.711521 0.304688 0.532224 0.617578 0.676365 0.867188L3.26972 5.27344H7.35722L9.95058 0.867188C10.0924 0.617578 9.91308 0.304688 9.62597 0.304688Z"
-						></path>
-					</svg>
-				</slot>
-			</div>
+		<div v-if="hasChildren" class="sapphire-table__table-header-children">
+			<TableHeaderCell
+				v-for="(child, index) in childColumns"
+				:column="child"
+				:key="index"
+				@filter="childOpenFilter"
+				@sort="childSortChange"
+			/>
 		</div>
 	</div>
 </template>
 
 <script lang="ts" setup>
 import type { IColumnRenderItem, ISortParams, ITableColumn } from '@sapphire-table/core';
-import { inject } from 'vue';
+import { computed, inject } from 'vue';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
 import type { IOpenFilterParams } from '../types/types';
@@ -113,6 +131,10 @@ const emit = defineEmits<{
 	(e: 'sort', params: ISortParams): void;
 }>();
 
+const childColumns = computed<IColumnRenderItem[]>(() => props.column.children || []);
+
+const hasChildren = computed(() => childColumns.value.length > 0);
+
 const handleSortChange = (event: Event, column: ITableColumn, type: 'up' | 'down') => {
 	event.stopPropagation();
 	const sortValueIndex = type === 'up' ? 0 : 1;
@@ -122,7 +144,7 @@ const handleSortChange = (event: Event, column: ITableColumn, type: 'up' | 'down
 };
 
 const handleColumnClick = (event: Event, column: ITableColumn) => {
-	if (!column.sort) {
+	if (!column.sort || hasChildren.value) {
 		return;
 	}
 	const { property, type } = table.sortInfo.value;
@@ -142,6 +164,14 @@ const handleColumnClick = (event: Event, column: ITableColumn) => {
 	emit('sort', {
 		...table.sortInfo.value,
 	});
+};
+
+const childOpenFilter = (params: IOpenFilterParams) => {
+	emit('filter', params);
+};
+
+const childSortChange = (sort: ISortParams) => {
+	emit('sort', sort);
 };
 
 const handleOpenFilter = (event: Event) => {

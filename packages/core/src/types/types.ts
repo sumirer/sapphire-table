@@ -103,6 +103,12 @@ export interface IColumnRenderItem {
 	 * filter params
 	 */
 	filterParams: IFilterParams;
+
+	deepLength: number;
+
+	children?: Array<IColumnRenderItem>;
+
+	parent: number[];
 }
 
 export interface IRenderInfo {
@@ -454,6 +460,7 @@ export interface IGridDescribe {
 	 */
 	gridColumns: IColumnRenderItem[];
 
+	gridHeaderColumns: IColumnRenderItem[];
 	/**
 	 * An array of row render items.
 	 */
@@ -494,6 +501,8 @@ export interface IGridDescribe {
 	 */
 	renderInfo: IRenderInfo;
 
+	headerRenderInfo: Pick<IRenderInfo, 'renderColumnStart' | 'renderColumnEnd'>;
+
 	/**
 	 * The vertical render fill distance.
 	 */
@@ -520,6 +529,8 @@ export interface IGridDescribe {
 	 * The keys are row indices, and the values are records representing the cell spans in each row.
 	 */
 	cellSpans: Record<number, Record<number, IGridCellSpan>>;
+
+	maxColumnDeepLength: number;
 }
 
 export interface ICellBorderInfo {
@@ -703,6 +714,11 @@ export interface ITableDescribe {
 	 * Indicates whether all rows are selected.
 	 */
 	selectAll: boolean;
+
+	/**
+	 * The table header columns deep level
+	 */
+	tableHeaderDeepLevel: number;
 }
 
 /**
@@ -793,3 +809,40 @@ export type ICellRenderCallback = (
 	rowIndex: number,
 	columnIndex: number
 ) => { rowSpan: number; colSpan: number } | undefined;
+
+export type CellPositionData = 'left' | 'body' | 'right' | null | undefined;
+
+export interface IMenuCurrentCell {
+	rowIndex: number;
+	columnIndex: number;
+	position: CellPositionData;
+}
+
+export interface IMenuParams {
+	tableInstance: ITableInstance;
+	current?: IMenuCurrentCell;
+	rowData?: IRowRenderItem;
+	columnData?: IColumnRenderItem;
+	selection?: Array<Pick<CellInfo, 'cellRow' | 'cellCol'>> | null;
+}
+
+export type IMenuVisible = (
+	params: Omit<IMenuParams, 'tableInstance'>
+) => boolean | undefined | null | number;
+
+export interface IMenuContentBlock {
+	title: string;
+	description?: string;
+	icon?: string;
+	key: string;
+	isGroup?: boolean;
+	visible?: IMenuVisible | boolean;
+	children?: IMenuContentBlock[];
+	onMenuClick?: (params: IMenuParams) => void;
+}
+
+export interface ITableMenuGroup {
+	header?: IMenuContentBlock[];
+	cell?: IMenuContentBlock[];
+	footer?: IMenuContentBlock[];
+}

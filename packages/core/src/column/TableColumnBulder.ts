@@ -182,6 +182,8 @@ export class ColumnBuilder {
 
 	private maxWidth: ITableColumn['maxWidth'] = undefined;
 
+	private children: ITableColumn['children'] = undefined;
+
 	public setWith(width: number): ColumnBuilder {
 		this.width = width;
 		return this;
@@ -271,6 +273,13 @@ export class ColumnBuilder {
 		this.minWidth = width;
 	}
 
+	public addChildColumn(factory: (childFactory: TableColumnFactory) => void) {
+		const childFactory = new TableColumnFactory(this.filterSlotName);
+		factory(childFactory);
+		this.children = childFactory.build();
+		return this;
+	}
+
 	/**
 	 * 从另外一个对象进行复制,不会复制 name 和 colKey
 	 * @param target
@@ -289,6 +298,7 @@ export class ColumnBuilder {
 		this.renderParams = target.renderParams;
 		this.minWidth = target.minWidth;
 		this.maxWidth = target.maxWidth;
+		this.children = target.children;
 		return this;
 	}
 
@@ -313,6 +323,7 @@ export class ColumnBuilder {
 			renderParams: this.renderParams,
 			minWidth: this.minWidth,
 			maxWidth: this.maxWidth,
+			children: this.children,
 		};
 	}
 }

@@ -1,5 +1,5 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import type { ICellBorderInfo, IGridDescribe } from '@sapphire-table/core';
+import type { CellPositionData, ICellBorderInfo, IGridDescribe } from '@sapphire-table/core';
 import { doRectanglesIntersect, getGridSelectionRect } from '@sapphire-table/core';
 import type { VirtualTableType } from './useVirtualTable';
 
@@ -57,13 +57,13 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 		tableDescribe.rightGrid.value.selectCell = {};
 	};
 
-	const getCellFromMouseEvent = (event: MouseEvent) => {
-		const { row, col } = (event.target as HTMLElement).dataset;
-		if (row && col) {
-			return bodyRef.value?.querySelector(`div[data-row="${row}"][data-col="${col}"]`);
-		}
-		return null;
-	};
+	// const getCellFromMouseEvent = (event: MouseEvent) => {
+	// 	const { row, col } = (event.target as HTMLElement).dataset;
+	// 	if (row && col) {
+	// 		return bodyRef.value?.querySelector(`div[role="cell"][data-row="${row}"][data-col="${col}"]`);
+	// 	}
+	// 	return null;
+	// };
 
 	const getCellInfo = (target: HTMLElement) => {
 		const cellRow = parseInt(target.dataset.row as string, 10);
@@ -78,9 +78,9 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 		};
 	};
 
-	const handleMouseMove = (event: MouseEvent, grid: IGridDescribe) => {
+	const handleMouseMove = (event: MouseEvent, target: HTMLDivElement, grid: IGridDescribe) => {
 		if (startCell) {
-			const currentCell = getCellFromMouseEvent(event);
+			const currentCell = getCellContent(event.target as HTMLElement);
 			if (currentCell) {
 				endCell = currentCell as HTMLTableCellElement;
 				if (lastCell === endCell) {
@@ -97,7 +97,7 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 					startY: rsY,
 					endX: reX,
 					endY: reY,
-				} = setCellSelection(grid, startX, startY, endX, endY);
+				} = setCellSelection(target, grid, startX, startY, endX, endY);
 				for (let rIndex = rsX; rIndex < reX; rIndex++) {
 					for (let cIndex = rsY; cIndex < reY; cIndex++) {
 						const cellSpan = grid.cellSpans[rIndex][cIndex];
@@ -129,7 +129,74 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 		}
 	};
 
+	const getSelectedCellData = (target?: HTMLDivElement) => {
+		if (target) {
+			const getCell = getCellContent(target);
+			if (getCell) {
+				const { cellRow, cellCol } = getCellInfo(getCell);
+				let position: CellPositionData = 'body';
+				if (leftRef.value?.contains(getCell)) {
+					position = 'left';
+					if (tableDescribe.leftGrid.value.selectCell[cellRow]?.[cellCol]) {
+						return {
+							current: { rowIndex: cellRow, columnIndex: cellCol, position },
+							range: tableDescribe.leftGrid.value.selectCell,
+						};
+					} else {
+						removeAllSelected();
+						setCellSelectionAction(tableDescribe.leftGrid.value, cellRow, cellCol, {
+							bottom: true,
+							top: true,
+							left: true,
+							right: true,
+						});
+					}
+				}
+				if (bodyRef.value?.contains(getCell)) {
+					position = 'body';
+					if (tableDescribe.bodyGrid.value.selectCell[cellRow]?.[cellCol]) {
+						return {
+							current: { rowIndex: cellRow, columnIndex: cellCol, position },
+							range: tableDescribe.bodyGrid.value.selectCell,
+						};
+					} else {
+						removeAllSelected();
+						setCellSelectionAction(tableDescribe.bodyGrid.value, cellRow, cellCol, {
+							bottom: true,
+							top: true,
+							left: true,
+							right: true,
+						});
+					}
+				}
+				if (rightRef.value?.contains(getCell)) {
+					position = 'right';
+					if (tableDescribe.rightGrid.value.selectCell[cellRow]?.[cellCol]) {
+						return {
+							current: { rowIndex: cellRow, columnIndex: cellCol, position },
+							range: tableDescribe.rightGrid.value.selectCell,
+						};
+					} else {
+						removeAllSelected();
+						setCellSelectionAction(tableDescribe.rightGrid.value, cellRow, cellCol, {
+							bottom: true,
+							top: true,
+							left: true,
+							right: true,
+						});
+					}
+				}
+				return {
+					current: { rowIndex: cellRow, columnIndex: cellCol, position },
+					range: { [cellRow]: { [cellCol]: true } },
+				};
+			}
+		}
+		return null;
+	};
+
 	const setCellSelection = (
+		target: HTMLDivElement,
 		grid: IGridDescribe,
 		startRow: number,
 		startCol: number,
@@ -137,7 +204,7 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 		endCol: number
 	) => {
 		const allCells = [
-			...(bodyRef.value?.querySelectorAll('div[data-row][data-col]') || []),
+			...(target.querySelectorAll('div[role="cell"][data-row][data-col]') || []),
 		] as unknown as HTMLTableCellElement[];
 		// 遍历所有单元格，检查它们是否在所需的范围内，并添加 'selected' 类
 		const result = allCells.map((cell) => {
@@ -196,7 +263,7 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 		});
 		if (maxX !== endRow || maxY !== endCol || minX !== startRow || minY !== startCol) {
 			// 递归获取附属的单元格，计算范围内被合并的范围，合并范围内所有的单元格
-			const { startX, startY, endX, endY } = setCellSelection(grid, minX, minY, maxX, maxY);
+			const { startX, startY, endX, endY } = setCellSelection(target, grid, minX, minY, maxX, maxY);
 			minX = startX;
 			minY = startY;
 			maxX = endX;
@@ -211,13 +278,6 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 	};
 
 	const handleMouseUp = () => {
-		if (startCell && endCell && startCell !== endCell) {
-			// showContextMenuCurrentRef.value = bodyRef.value?.querySelector(
-			// 	`div[data-row="${selectRange.startRow}"][data-col="${selectRange.startCol}"]`
-			// ) as unknown as HTMLDivElement;
-			// mergeCell();
-			// removeAllSelected();
-		}
 		startCell = undefined;
 		endCell = undefined;
 	};
@@ -241,19 +301,34 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 	};
 
 	const bodyEvents: Record<string, (event: Event) => void> = {
-		mousemove: (event) => handleMouseMove(event as MouseEvent, tableDescribe.bodyGrid.value),
+		mousemove: (event) =>
+			handleMouseMove(
+				event as MouseEvent,
+				bodyRef.value as HTMLDivElement,
+				tableDescribe.bodyGrid.value
+			),
 		mouseup: handleMouseUp,
 		mousedown: (event) => handleMouseDown(event as MouseEvent, tableDescribe.bodyGrid.value),
 	};
 
 	const leftEvents: Record<string, (event: Event) => void> = {
-		mousemove: (event) => handleMouseMove(event as MouseEvent, tableDescribe.leftGrid.value),
+		mousemove: (event) =>
+			handleMouseMove(
+				event as MouseEvent,
+				leftRef.value as HTMLDivElement,
+				tableDescribe.leftGrid.value
+			),
 		mouseup: handleMouseUp,
 		mousedown: (event) => handleMouseDown(event as MouseEvent, tableDescribe.leftGrid.value),
 	};
 
 	const rightEvents: Record<string, (event: Event) => void> = {
-		mousemove: (event) => handleMouseMove(event as MouseEvent, tableDescribe.rightGrid.value),
+		mousemove: (event) =>
+			handleMouseMove(
+				event as MouseEvent,
+				rightRef.value as HTMLDivElement,
+				tableDescribe.rightGrid.value
+			),
 		mouseup: handleMouseUp,
 		mousedown: (event) => handleMouseDown(event as MouseEvent, tableDescribe.rightGrid.value),
 	};
@@ -274,7 +349,7 @@ export const useGridSelection = (tableDescribe: VirtualTableType, enabled?: bool
 		}
 	});
 
-	return { bodyRef, rightRef, leftRef };
+	return { bodyRef, rightRef, leftRef, getSelectedCellData };
 };
 
 export type GridSelectionType = ReturnType<typeof useGridSelection>;

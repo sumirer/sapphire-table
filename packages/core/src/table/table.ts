@@ -70,6 +70,7 @@ export function createTableDescribe(): ITableDescribe {
 		},
 		isHalf: false,
 		selectAll: false,
+		tableHeaderDeepLevel: 1,
 	};
 }
 
@@ -99,9 +100,10 @@ export function updateTableColumnsConfig(
 			bodyColumns.push(col);
 		}
 	});
-	initializeGridColumns(describe.leftGrid, leftFixedColumns);
-	initializeGridColumns(describe.bodyGrid, bodyColumns);
-	initializeGridColumns(describe.rightGrid, rightFixedColumns);
+	const leftDeep = initializeGridColumns(describe.leftGrid, leftFixedColumns);
+	const bodyDeep = initializeGridColumns(describe.bodyGrid, bodyColumns);
+	const rightDeep = initializeGridColumns(describe.rightGrid, rightFixedColumns);
+	describe.tableHeaderDeepLevel = Math.max(leftDeep, bodyDeep, rightDeep);
 	describe.leftColumns = describe.leftGrid.gridColumns;
 	describe.bodyColumns = describe.bodyGrid.gridColumns;
 	describe.rightColumns = describe.rightGrid.gridColumns;
@@ -524,7 +526,7 @@ export function loadTableExpandData(
 	if (tableConfig?.expandConfig) {
 		const { dataLoadMethod } = tableConfig.expandConfig;
 		return dataLoadMethod(
-			rowData.expandInnerData,
+			rowData.expandInnerData as never,
 			params || {
 				filter: [],
 				sort: { property: '', type: '' },
@@ -668,9 +670,25 @@ export function updateTableCellSpans(
 	bodyRender?: ICellRenderCallback,
 	rightRender?: ICellRenderCallback
 ) {
-	computeGridCellSpans(describe.bodyGrid, bodyRender);
-	computeGridCellSpans(describe.leftGrid, leftRender);
-	computeGridCellSpans(describe.rightGrid, rightRender);
+	computeGridCellSpans(describe.bodyGrid, describe.bodyGrid.renderInfo, bodyRender);
+	computeGridCellSpans(
+		describe.leftGrid,
+		{
+			...describe.bodyGrid.renderInfo,
+			renderColumnStart: 0,
+			renderColumnEnd: describe.leftColumns.length - 1,
+		},
+		leftRender
+	);
+	computeGridCellSpans(
+		describe.rightGrid,
+		{
+			...describe.bodyGrid.renderInfo,
+			renderColumnStart: 0,
+			renderColumnEnd: describe.rightColumns.length - 1,
+		},
+		rightRender
+	);
 }
 
 /**

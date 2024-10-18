@@ -2,8 +2,8 @@
 	<div
 		class="sapphire-table__table-header"
 		:style="{
-			height: '40px',
 			width: '100%',
+			height: table.tableHeaderDeepLevel.value * 40 + 'px',
 		}"
 	>
 		<div
@@ -12,7 +12,7 @@
 			:class="{ 'sapphire-table__ping-left': table.pingLeft.value }"
 		>
 			<TableHeaderCell
-				v-for="(col, index) in table.leftColumns.value"
+				v-for="(col, index) in table.leftGrid.value.gridHeaderColumns"
 				:key="col.column.colKey + '_' + index"
 				:column="col"
 				@filter="handleOpenFilter"
@@ -35,7 +35,7 @@
 				<TableHeaderCell
 					v-for="colIndex in bodyColumnRenderIndex"
 					:key="colIndex"
-					:column="table.bodyColumns.value[colIndex]"
+					:column="table.bodyGrid.value.gridHeaderColumns[colIndex]"
 					@filter="handleOpenFilter"
 					@sort="handleSort"
 				>
@@ -51,7 +51,7 @@
 			:class="{ 'sapphire-table__ping-right': table.pingRight.value }"
 		>
 			<TableHeaderCell
-				v-for="(col, index) in table.rightColumns.value"
+				v-for="(col, index) in table.rightGrid.value.gridHeaderColumns"
 				:key="col.column.colKey + '_' + index"
 				:column="col"
 				@filter="handleOpenFilter"
@@ -88,12 +88,12 @@ const emit = defineEmits<{
 
 const bodyColumnRenderIndex = computed(() => {
 	const rangeIndex: Array<number> = [];
-	if (table.bodyColumns.value.length === 0) {
+	if (table.bodyGrid.value.gridHeaderColumns.length === 0) {
 		return rangeIndex;
 	}
 	for (
-		let index = table.bodyGrid.value.renderInfo.renderColumnStart;
-		index <= table.bodyGrid.value.renderInfo.renderColumnEnd;
+		let index = table.bodyGrid.value.headerRenderInfo.renderColumnStart;
+		index <= table.bodyGrid.value.headerRenderInfo.renderColumnEnd;
 		index++
 	) {
 		rangeIndex.push(index);
