@@ -3,6 +3,7 @@
 		<slot name="sapphireLoading" :loading="tableLoading">
 			<SapphireLoading v-if="tableLoading" />
 		</slot>
+		<TableContentMenu :on-menu-click="handleMenuClick" />
 		<TableHeader @filter="handleOpenFilter" @sort="handleUpdateSort">
 			<template v-for="(_, name) in usageSlots" :key="name" v-slot:[name]="bindValue">
 				<slot :name="name" v-bind="bindValue"></slot>
@@ -26,6 +27,7 @@
 						table.rightFixedWidth.value +
 						'px',
 				}"
+				@contextmenu="handleBodyContextMenu"
 			>
 				<TableFilter ref="tableFilterRef" @filter="handleConfirmFilter">
 					<template v-for="(_, name) in usageSlots" :key="name" v-slot:[name]="bindValue">
@@ -33,7 +35,7 @@
 					</template>
 				</TableFilter>
 				<TableColumnFixedWrapper
-					v-if="table.leftColumns.value.length > 0"
+					v-if="table.leftGrid.value.gridColumns.length > 0"
 					:width="table.leftFixedWidth.value + 'px'"
 					position="left"
 					:height="table.tableContentHeight.value + 'px'"
@@ -44,7 +46,7 @@
 					:range-selection="props.rangeSelection"
 				>
 					<RowRenderDelegation
-						:columns="table.leftColumns.value"
+						:columns="table.leftGrid.value.gridColumns"
 						:computed-row-style="props.computedRowStyle"
 						position="left"
 						with-expand
@@ -68,7 +70,7 @@
 					:ref="cellSelection.bodyRef"
 				>
 					<RowRenderDelegation
-						:columns="table.bodyColumns.value"
+						:columns="table.bodyGrid.value.gridColumns"
 						:computed-row-style="props.computedRowStyle"
 						position="body"
 						:cell-render="props.cellRender"
@@ -81,14 +83,14 @@
 				</div>
 				<div style="flex: 1"></div>
 				<TableColumnFixedWrapper
-					v-if="table.rightColumns.value.length > 0"
+					v-if="table.rightGrid.value.gridColumns.length > 0"
 					:width="table.rightFixedWidth.value + 'px'"
 					position="right"
 					:height="table.tableContentHeight.value + 'px'"
 					:range-selection="props.rangeSelection"
 				>
 					<RowRenderDelegation
-						:columns="table.rightColumns.value"
+						:columns="table.rightGrid.value.gridColumns"
 						:computed-row-style="props.computedRowStyle"
 						position="right"
 						:cell-render="props.rightGridCellRender"
@@ -109,9 +111,12 @@ import { computed, nextTick, onMounted, provide, ref, useSlots, watch } from 'vu
 import RowRenderDelegation from './RowRenderDelegation.vue';
 import { useVirtualTable } from '../hooks/useVirtualTable';
 import type {
+	CellInfo,
 	ICellRenderCallback,
 	IExpandParams,
 	IFilterParams,
+	IMenuContentBlock,
+	IMenuVisible,
 	IRowRenderItem,
 	ISortParams,
 	ITableColumn,
@@ -119,8 +124,13 @@ import type {
 	ITableConfig,
 	ITableFormats,
 	ITableInstance,
+	ITableMenuGroup,
 } from '@sapphire-table/core';
-import { TABLE_PROVIDER_KEY, TABLE_PROVIDER_SELECTION_KEY } from '../constant/table';
+import {
+	TABLE_PROVIDER_CONTENT_MENU_KEY,
+	TABLE_PROVIDER_KEY,
+	TABLE_PROVIDER_SELECTION_KEY,
+} from '../constant/table';
 import '@sapphire-table/core/lib/style/index.css';
 import TableHeader from './TableHeader.vue';
 import TableColumnFixedWrapper from './TableColumnFixedWrapper.vue';
@@ -129,6 +139,8 @@ import TableFilter from './TableFilter.vue';
 import type { IOpenFilterParams, ITableFilterInstance } from '../types/types';
 import SapphireLoading from '../components/SapphireLoading.vue';
 import { useGridSelection } from '../hooks/useGridSelection';
+import { useContentMenu } from '../hooks/useContentMenu';
+import TableContentMenu from './TableContentMenu.vue';
 
 interface ITableProps<T = any> {
 	/**
@@ -191,6 +203,8 @@ interface ITableProps<T = any> {
 	stripe?: boolean;
 
 	rangeSelection?: boolean;
+
+	menus?: ITableMenuGroup;
 }
 
 // const emit = defineEmits(['filter', 'sort', 'update:loading']);
@@ -241,9 +255,13 @@ const table = useVirtualTable(props.config);
 
 const cellSelection = useGridSelection(table, props.rangeSelection);
 
+const contentMenu = useContentMenu();
+
 provide(TABLE_PROVIDER_KEY, table);
 
 provide(TABLE_PROVIDER_SELECTION_KEY, cellSelection);
+
+provide(TABLE_PROVIDER_CONTENT_MENU_KEY, contentMenu);
 
 Object.assign(table.globalFormatter.value, props.formats || {});
 
@@ -272,6 +290,89 @@ const testScrollBarVisibleChange = () => {
 
 const handleOpenFilter = (params: IOpenFilterParams) => {
 	tableFilterRef.value?.openFilter(params);
+};
+
+const getVisibleMenus = (
+	menus: IMenuContentBlock[],
+	visibleParams: Parameters<IMenuVisible>[0]
+) => {
+	const getComputeCellMenu: IMenuContentBlock[] = [];
+	menus.forEach((menu) => {
+		if (typeof menu?.visible === 'function') {
+			if (menu?.visible(visibleParams)) {
+				menu.children = menu.children ? getVisibleMenus(menu.children, visibleParams) : undefined;
+				getComputeCellMenu.push(menu);
+			}
+		} else if (typeof menu?.visible === 'boolean') {
+			if (menu?.visible) {
+				menu.children = menu.children ? getVisibleMenus(menu.children, visibleParams) : undefined;
+				getComputeCellMenu.push(menu);
+			}
+		} else {
+			menu.children = menu.children ? getVisibleMenus(menu.children, visibleParams) : undefined;
+			getComputeCellMenu.push(menu);
+		}
+	});
+	return getComputeCellMenu;
+};
+
+const handleBodyContextMenu = (event: MouseEvent) => {
+	const bodyCellMenu = props.menus?.cell || [];
+	if (bodyCellMenu.length === 0 && !props.rangeSelection) {
+		return;
+	}
+	const range = cellSelection.getSelectedCellData(event.target as HTMLDivElement);
+	const currentGrid =
+		range?.current?.position === 'left'
+			? table.leftGrid
+			: range?.current?.position === 'right'
+				? table.rightGrid
+				: range?.current?.position === 'body'
+					? table.bodyGrid
+					: null;
+	const selectionCell: Pick<CellInfo, 'cellCol' | 'cellRow'>[] = [];
+	if (range?.range) {
+		Object.entries(range.range).forEach((entries) => {
+			const [rowKey, value] = entries;
+			Object.keys(value).forEach((colKey) => {
+				selectionCell.push({ cellCol: Number(colKey), cellRow: Number(rowKey) });
+			});
+		});
+	}
+	const visibleParams = {
+		current: range?.current,
+		rowData: range?.current.rowIndex ? table.tableRowData.value[range.current.rowIndex] : undefined,
+		columnData: range
+			? currentGrid?.value.gridColumns[range.current.rowIndex as number]
+			: undefined,
+		selection: selectionCell,
+	};
+	const getComputeCellMenu = getVisibleMenus(bodyCellMenu, visibleParams);
+	if (getComputeCellMenu.length === 0) {
+		return;
+	}
+	event.preventDefault();
+	contentMenu.showMenuContent(getComputeCellMenu, {
+		x: event.clientX,
+		y: event.clientY,
+		position: range?.current.position,
+		selection: selectionCell,
+		current: range?.current,
+		columnData: range
+			? currentGrid?.value.gridColumns[range.current.rowIndex as number]
+			: undefined,
+		rowData: range?.current.rowIndex ? table.tableRowData.value[range.current.rowIndex] : undefined,
+	});
+};
+
+const handleMenuClick = (menu: IMenuContentBlock) => {
+	menu.onMenuClick?.({
+		tableInstance,
+		selection: contentMenu.position.selection,
+		current: contentMenu.position.current,
+		columnData: contentMenu.position.columnData,
+		rowData: contentMenu.position.rowData,
+	});
 };
 
 const handleConfirmFilter = (params: Array<IFilterParams>) => {
@@ -313,6 +414,22 @@ watch(
 		});
 	},
 	{ immediate: true }
+);
+
+watch(
+	() => [
+		table.bodyGrid.value.renderInfo.renderColumnEnd,
+		table.bodyGrid.value.renderInfo.renderColumnStart,
+		table.bodyGrid.value.renderInfo.renderRowEnd,
+		table.bodyGrid.value.renderInfo.renderRowStart,
+	],
+	() => {
+		table.updateTableCellSpan(
+			props.leftGridCellRender,
+			props.cellRender,
+			props.rightGridCellRender
+		);
+	}
 );
 
 watch(
@@ -394,7 +511,7 @@ if (props.data) {
 	handleLoadTableData();
 }
 
-defineExpose<ITableInstance>({
+const tableInstance: ITableInstance = {
 	setRowExpand: table.handleUpdateExpandRow,
 	scrollToRow: handleScrollToRow,
 	reloadRowExpand: table.handleReloadRowData,
@@ -404,5 +521,7 @@ defineExpose<ITableInstance>({
 	setDefaultSelection: table.setDefaultSelection,
 	loadData: handleLoadTableData,
 	filterInstance: table.filterInstance,
-});
+};
+
+defineExpose<ITableInstance>(tableInstance);
 </script>

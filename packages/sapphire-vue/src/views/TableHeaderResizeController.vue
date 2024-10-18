@@ -29,11 +29,15 @@
 							: `${
 									table.bodyWidth.value -
 									table.rightFixedWidth.value +
-									usageColumns[colIndex].renderOffset +
-									usageColumns[colIndex].renderWidth -
+									usageColumns[colIndex].renderOffset -
 									3 +
 									(resizeControl.index === colIndex ? resizeControl.resizeOffsetChange : 0)
 								}px`,
+				['--sapphire-resize-height']:
+					table.tableHeaderDeepLevel.value > 1 && usageColumns[colIndex].parent.length === 1
+						? table.tableHeaderDeepLevel.value * 40 + 'px'
+						: '40px',
+				['--sapphire-resize-offset']: (usageColumns[colIndex].parent.length - 1) * 40 + 'px',
 			}"
 		>
 			<div />
@@ -45,7 +49,7 @@
 import { computed, inject, reactive } from 'vue';
 import type { VirtualTableType } from '../hooks/useVirtualTable';
 import { TABLE_PROVIDER_KEY } from '../constant/table';
-import type { IColumnRenderItem } from '@sapphire-table/core';
+import type { IColumnRenderItem, IGridDescribe } from '@sapphire-table/core';
 import { ensureColumnWidthsFillSpace, updateColumnRenderInfo } from '@sapphire-table/core';
 import { utils } from '@sapphire-table/core';
 
@@ -53,18 +57,20 @@ const props = defineProps<{ position: 'body' | 'left' | 'right' }>();
 
 const table = inject<VirtualTableType>(TABLE_PROVIDER_KEY) as VirtualTableType;
 
-const usageColumns = computed<Array<IColumnRenderItem>>(() =>
+const usageGrid = computed<IGridDescribe>(() =>
 	props.position === 'body'
-		? table.bodyColumns.value
+		? table.bodyGrid.value
 		: props.position === 'left'
-			? table.leftColumns.value
-			: table.rightColumns.value
+			? table.leftGrid.value
+			: table.rightGrid.value
 );
+
+const usageColumns = computed<Array<IColumnRenderItem>>(() => usageGrid.value.gridColumns);
 
 const columnRenderRange = computed(() => {
 	const rangeIndex: Array<number> = [];
 	if (props.position === 'body') {
-		if (table.bodyColumns.value.length === 0) {
+		if (table.bodyGrid.value.gridColumns.length === 0) {
 			return rangeIndex;
 		}
 		for (
@@ -75,11 +81,11 @@ const columnRenderRange = computed(() => {
 			rangeIndex.push(index);
 		}
 	} else if (props.position === 'left') {
-		for (let index = 0; index < table.leftColumns.value.length; index++) {
+		for (let index = 0; index < table.leftGrid.value.gridColumns.length; index++) {
 			rangeIndex.push(index);
 		}
 	} else {
-		for (let index = 0; index < table.rightColumns.value.length; index++) {
+		for (let index = 0; index < table.rightGrid.value.gridColumns.length; index++) {
 			rangeIndex.push(index);
 		}
 	}
@@ -117,8 +123,22 @@ const handleResizeUpdate = (event: MouseEvent) => {
 
 const handleResizeEnd = () => {
 	if (resizeControl.index >= 0) {
-		usageColumns.value[resizeControl.index].renderWidth =
-			usageColumns.value[resizeControl.index].renderWidth + resizeControl.resizeOffsetChange;
+		const currentColumns = usageGrid.value.gridHeaderColumns;
+		const targetPath = [...usageColumns.value[resizeControl.index].parent].reverse();
+		let path: number | undefined = targetPath.pop();
+		let target: IColumnRenderItem[] = currentColumns;
+		const resizeChange =
+			props.position === 'right'
+				? -resizeControl.resizeOffsetChange
+				: resizeControl.resizeOffsetChange;
+		while (path !== undefined && target.length > 0) {
+			const targetColumn = target[path];
+			if (targetColumn) {
+				targetColumn.renderWidth += resizeChange;
+				target = targetColumn.children || [];
+			}
+			path = targetPath.pop();
+		}
 		updateTableLayout();
 	}
 	resizeControl.index = -1;
@@ -127,13 +147,10 @@ const handleResizeEnd = () => {
 };
 
 const updateTableLayout = () => {
-	if (props.position === 'body') {
-		updateColumnRenderInfo(table.bodyGrid.value);
-	} else if (props.position === 'left') {
-		updateColumnRenderInfo(table.leftGrid.value);
+	updateColumnRenderInfo(usageGrid.value);
+	if (props.position === 'left') {
 		ensureColumnWidthsFillSpace(table.leftGrid.value);
-	} else {
-		updateColumnRenderInfo(table.rightGrid.value);
+	} else if (props.position === 'right') {
 		ensureColumnWidthsFillSpace(table.rightGrid.value);
 	}
 	table.updateTableLayout();

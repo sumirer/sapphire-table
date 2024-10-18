@@ -4,6 +4,7 @@ import type {
 	IColumnRenderItem,
 	IFilterParams,
 	IGridDescribe,
+	IRenderInfo,
 	IScrollOffset,
 	ITableColumns,
 	Rectangle,
@@ -19,6 +20,7 @@ import type { IGridCellSpan } from '../types/types';
 export function createGridDescribe(): IGridDescribe {
 	return {
 		gridColumns: [],
+		gridHeaderColumns: [],
 		gridRows: [],
 		gridWidth: 0,
 		gridContentWidth: 0,
@@ -32,11 +34,16 @@ export function createGridDescribe(): IGridDescribe {
 			renderRowEnd: 0,
 			renderRowStart: 0,
 		},
+		headerRenderInfo: {
+			renderColumnEnd: 0,
+			renderColumnStart: 0,
+		},
 		verticalRenderFillDistance: 100,
 		horizontalRenderFillDistance: 100,
 		lastUpdateTask: undefined,
 		selectCell: {},
 		cellSpans: {},
+		maxColumnDeepLength: 1,
 	};
 }
 
@@ -58,6 +65,14 @@ export function requestGridLayoutUpdate(describe: IGridDescribe) {
 	}
 	describe.lastUpdateTask = setTimeout(() => {
 		calculateVisibleCells(describe);
+		if (describe.maxColumnDeepLength > 1) {
+			calculateVisibleHeaderCell(describe);
+		} else {
+			Object.assign(describe.headerRenderInfo, {
+				renderColumnEnd: describe.renderInfo.renderColumnEnd,
+				renderColumnStart: describe.renderInfo.renderColumnStart,
+			});
+		}
 		describe.lastUpdateTask = undefined;
 	}, 0);
 }
@@ -127,6 +142,41 @@ export function calculateVisibleCells(describe: IGridDescribe): void {
 }
 
 /**
+ * Calculates the visible header cells based on the grid's current state.
+ *
+ * @param describe - The grid description object containing necessary information for rendering and layout.
+ *
+ * @remarks
+ * This function uses the `calculateRenderRangeIndices` helper function to determine the visible header cells
+ * based on the grid's current scroll position and the available grid width.
+ * The function updates the `headerRenderInfo` object with the start and end indices of the visible header cells.
+ */
+export function calculateVisibleHeaderCell(describe: IGridDescribe): void {
+	const {
+		headerRenderInfo,
+		gridHeaderColumns,
+		gridWidth,
+		offsetX: renderXPosition,
+		horizontalRenderFillDistance,
+	} = describe;
+	const { renderColumnStart: oldColStart } = headerRenderInfo;
+
+	const { startIndex: colStartIndex, endIndex: colEndIndex } = calculateRenderRangeIndices(
+		gridHeaderColumns,
+		oldColStart,
+		[
+			renderXPosition - horizontalRenderFillDistance,
+			renderXPosition + gridWidth + horizontalRenderFillDistance,
+		],
+		{ offset: 'renderOffset', length: 'renderWidth' }
+	);
+
+	Object.assign(describe.headerRenderInfo, {
+		renderColumnStart: colStartIndex,
+		renderColumnEnd: colEndIndex,
+	});
+}
+/**
  * Initializes the grid columns based on the provided table columns and updates the grid description.
  *
  * @param describe - The grid description object containing necessary information for rendering and layout.
@@ -138,24 +188,20 @@ export function calculateVisibleCells(describe: IGridDescribe): void {
  * Finally, it triggers a grid layout update by calling the `requestGridLayoutUpdate` function.
  */
 export function initializeGridColumns(describe: IGridDescribe, columns: ITableColumns) {
-	let totalWidth = 0;
-	const newColumnList: Array<IColumnRenderItem> = [];
-	for (let index = 0; index < columns.length; index++) {
-		const parseWidth = columns[index].width ?? 0;
-		newColumnList.push({
-			renderWidth: parseWidth,
-			width: parseWidth,
-			column: columns[index],
-			renderOffset: totalWidth,
-			filterParams: columns[index].filterParams
-				? (deepClone(columns[index].filterParams) as IFilterParams)
-				: { type: '', value: undefined, customData: null },
-		});
-		totalWidth += parseWidth;
+	const { column, width, deepLength } = parseComposeColumnData(columns);
+	describe.maxColumnDeepLength = deepLength;
+	if (deepLength > 1) {
+		const parseGridColumns: IColumnRenderItem[] = [];
+		getLastChildColumn(column, parseGridColumns);
+		reComputeColumnOffset(parseGridColumns);
+		describe.gridColumns = parseGridColumns;
+	} else {
+		describe.gridColumns = column;
 	}
-	describe.gridColumns = newColumnList;
-	describe.gridContentWidth = totalWidth;
+	describe.gridHeaderColumns = column;
+	describe.gridContentWidth = width;
 	requestGridLayoutUpdate(describe);
+	return deepLength;
 }
 
 /**
@@ -171,15 +217,15 @@ export function initializeGridColumns(describe: IGridDescribe, columns: ITableCo
  * - `gridContentWidth`: The total width of the grid content.
  */
 export function updateColumnRenderInfo(describe: IGridDescribe) {
-	let totalWidth = 0;
-	const columnData = describe.gridColumns;
-	for (let index = 0; index < columnData.length; index++) {
-		const parseWidth = columnData[index].renderWidth;
-		columnData[index].renderOffset = totalWidth;
-		totalWidth += parseWidth;
+	reComputeColumnOffset(describe.gridHeaderColumns);
+	if (describe.maxColumnDeepLength > 1) {
+		const parseGridColumns: IColumnRenderItem[] = [];
+		getLastChildColumn(describe.gridHeaderColumns, parseGridColumns);
+		describe.gridColumns = parseGridColumns;
+	} else {
+		describe.gridColumns = [...describe.gridHeaderColumns];
 	}
-	describe.gridColumns = [...columnData];
-	describe.gridContentWidth = totalWidth;
+	describe.gridContentWidth = reComputeColumnOffset(describe.gridColumns);
 	requestGridLayoutUpdate(describe);
 }
 
@@ -194,7 +240,7 @@ export function updateColumnRenderInfo(describe: IGridDescribe) {
  * The function uses the `allocateSpace` helper function to perform the distribution.
  */
 export function ensureColumnWidthsFillSpace(describe: IGridDescribe) {
-	const { gridWidth: renderColumnWidth, gridColumns: columnData } = describe;
+	const { gridWidth: renderColumnWidth, gridHeaderColumns: columnData } = describe;
 	let renderMaxWidth = 0;
 
 	// Iterate through each column to calculate the total render width
@@ -223,13 +269,29 @@ export function ensureColumnWidthsFillSpace(describe: IGridDescribe) {
  * @param size - The remaining space to be distributed among the columns.
  */
 function allocateGridColumnSpace(describe: IGridDescribe, size: number) {
-	const columnData = describe.gridColumns;
-	const columnCount = columnData.length;
-	const cellWidth = Math.floor(size / columnCount);
-	columnData.forEach((col) => {
-		col.renderWidth += cellWidth;
-	});
+	allocateGridColumnChildSpace(describe.gridHeaderColumns, size);
 	updateColumnRenderInfo(describe);
+}
+
+/**
+ * Distributes the remaining space evenly among all columns in the grid.
+ *
+ * @param columns - An array of column render items, each representing a column in the grid.
+ * @param size - The remaining space to be distributed among the columns.
+ *
+ * @remarks
+ * This function calculates the remaining space based on the given size and the total width of the columns.
+ * It then evenly distributes this remaining space among all columns by incrementing their `renderWidth` property.
+ * If a column has children, this function recursively calls itself with the children array to distribute the space among the child columns.
+ */
+function allocateGridColumnChildSpace(columns: IColumnRenderItem[], size: number) {
+	const childWidth = Math.floor(size / columns.length);
+	columns.forEach((col) => {
+		col.renderWidth += childWidth;
+		if (col.children && col.children.length > 0) {
+			allocateGridColumnChildSpace(col.children, childWidth);
+		}
+	});
 }
 
 /**
@@ -392,6 +454,7 @@ export function getGridSelectionRect(cellStart: CellInfo, cellEnd: CellInfo) {
  * Computes the row and column spans for each cell in the grid.
  *
  * @param describe - The grid description object containing necessary information for rendering and layout.
+ * @param renderInfo
  * @param computeCallback - An optional callback function that can be used to customize the row and column spans for each cell.
  *
  * @remarks
@@ -401,14 +464,14 @@ export function getGridSelectionRect(cellStart: CellInfo, cellEnd: CellInfo) {
  */
 export function computeGridCellSpans(
 	describe: IGridDescribe,
+	renderInfo: IRenderInfo,
 	computeCallback?: ICellRenderCallback
 ) {
 	const spans: Record<number, Record<number, IGridCellSpan>> = {};
-	const rowLength = describe.gridRows.length;
-	const colLength = describe.gridColumns.length;
-	for (let rowIndex = 0; rowIndex < rowLength; rowIndex++) {
+	const { renderColumnStart, renderRowStart, renderRowEnd, renderColumnEnd } = renderInfo;
+	for (let rowIndex = renderRowStart; rowIndex <= renderRowEnd; rowIndex++) {
 		const rowData = describe.gridRows[rowIndex];
-		for (let colIndex = 0; colIndex < colLength; colIndex++) {
+		for (let colIndex = renderColumnStart; colIndex <= renderColumnEnd; colIndex++) {
 			const colData = describe.gridColumns[colIndex];
 			const computeSpans = computeCallback?.(rowData, colData, rowIndex, colIndex) || {
 				rowSpan: 1,
@@ -439,4 +502,112 @@ export function computeGridCellSpans(
 		}
 	}
 	describe.cellSpans = spans;
+}
+
+/**
+ * Parses and composes column data for a grid component.
+ *
+ * @param columns - The array of column data to be parsed and composed.
+ *
+ * @param parent
+ * @returns An object containing the parsed and composed column data.
+ * - `column`: An array of column render items, each representing a column in the grid.
+ * - `width`: The total width of all columns combined.
+ *
+ * @remarks
+ * This function iterates through the given array of column data, calculates the width of each column,
+ * and constructs a new array of column render items. It also recursively handles nested columns.
+ * The total width of all columns is calculated and returned alongside the array of column render items.
+ */
+function parseComposeColumnData(columns: ITableColumns, parent: Array<number> = []) {
+	let totalWidth = 0;
+	let deepLength = 1;
+	const newColumnList: Array<IColumnRenderItem> = [];
+	for (let index = 0; index < columns.length; index++) {
+		const targetColumn = columns[index];
+		let parseWidth = targetColumn.width ?? 0;
+		let children: IColumnRenderItem[] | undefined = undefined;
+		let childDeepLength = 1;
+		if (targetColumn.children) {
+			const {
+				column,
+				width,
+				deepLength: childDeep,
+			} = parseComposeColumnData(targetColumn.children, [...parent, index]);
+			// get all children width
+			parseWidth = width;
+			children = column;
+			childDeepLength += childDeep;
+			deepLength = Math.max(deepLength, childDeepLength);
+		}
+		const createColumn: IColumnRenderItem = {
+			renderWidth: parseWidth,
+			width: parseWidth,
+			column: targetColumn,
+			renderOffset: totalWidth,
+			filterParams: targetColumn.filterParams
+				? (deepClone(targetColumn.filterParams) as IFilterParams)
+				: { type: '', value: undefined, customData: null },
+			children,
+			deepLength: childDeepLength,
+			parent: [...parent, index],
+		};
+		newColumnList.push(createColumn);
+		totalWidth += parseWidth;
+	}
+	return {
+		column: newColumnList,
+		width: totalWidth,
+		deepLength,
+	};
+}
+
+/**
+ * Retrieves the last child column from the given array of columns and appends it to the columnData array.
+ * If a column has children, this function recursively retrieves the last child column from the children array.
+ *
+ * @param columns - An array of column render items, each representing a column in the grid.
+ * @param columnData - An array to store the last child columns retrieved from the given columns array.
+ *
+ * @returns The columnData array, containing the last child columns retrieved from the given columns array.
+ *
+ * @remarks
+ * This function iterates through the given array of column render items and checks if each column has children.
+ * If a column has children, the function recursively calls itself with the children array to retrieve the last child column.
+ * If a column does not have children, it appends the column to the columnData array.
+ * The function returns the columnData array after processing all columns.
+ */
+export function getLastChildColumn(columns: IColumnRenderItem[], columnData: IColumnRenderItem[]) {
+	columns.forEach((column) => {
+		if (column.children && column.children.length > 0) {
+			getLastChildColumn(column.children, columnData);
+		} else {
+			columnData.push({ ...column });
+		}
+	});
+	return columnData;
+}
+
+/**
+ * Recomputes the render offset for each column in the given array.
+ *
+ * @param columns - An array of column render items, each representing a column in the grid.
+ *
+ * @returns The total width of all columns combined after recomputing the render offsets.
+ *
+ * @remarks
+ * This function iterates through the given array of column render items and updates the `renderOffset` property of each column.
+ * The `renderOffset` property represents the cumulative width of all columns before the current column.
+ * The function also calculates and returns the total width of all columns combined after recomputing the render offsets.
+ */
+export function reComputeColumnOffset(columns: IColumnRenderItem[]) {
+	let totalOffset = 0;
+	columns.forEach((column) => {
+		column.renderOffset = totalOffset;
+		totalOffset += column.renderWidth;
+		if (column.children && column.children.length > 0) {
+			reComputeColumnOffset(column.children);
+		}
+	});
+	return totalOffset;
 }
